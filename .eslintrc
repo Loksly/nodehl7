@@ -1,0 +1,14 @@
+{
+  "env": {
+    "node": true
+  },
+  "rules": {
+    "semi": [2, "always"],
+    "quotes": [2, "single"],
+    "curly": 2,
+    "no-use-before-define": 2,
+    "camelcase": 0,
+    "no-unused-vars": [2, {"args":"none"}],
+    "no-underscore-dangle": 0,
+  }
+}

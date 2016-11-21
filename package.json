@@ -1,0 +1,23 @@
+{
+  "name": "node-hl7",
+  "version": "1.0.0",
+  "description": "NodeJS Library for parsing HL7 Messages",
+  "main": "lib/hl7.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Loksly/node-hl7.git"
+  },
+  "keywords": [
+    "nodejs",
+    "hl7"
+  ],
+  "author": "Loksly",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Loksly/node-hl7/issues"
+  },
+  "homepage": "https://github.com/Loksly/node-hl7#readme"
+}
