@@ -1,6 +1,6 @@
 {
-  "name": "node-hl7",
-  "version": "1.0.0",
+  "name": "nodehl7",
+  "version": "0.0.1",
   "description": "NodeJS Library for parsing HL7 Messages",
   "main": "lib/hl7.js",
   "scripts": {

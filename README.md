@@ -6,8 +6,13 @@ This library provides an easy way to parse HL7 Messages v.2.x, text-based, no XM
 
 Usage:
 
+```bash
+npm install nodehl7 --save
+```
+
+
 ```javascript
-	const Hl7lib = require('node-hl7');
+	const Hl7lib = require('nodehl7');
 	const config = {
 		"mapping": false,
 		"profiling": true,
@@ -154,4 +159,4 @@ HL7Segment.prototype.segmentsFields = {
 	}
 ```
 
-Not yet on NPM. Give me some time please.
+
