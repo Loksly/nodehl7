@@ -1,4 +1,4 @@
-# node-hl7
+# nodehl7
 NodeJS Library for parsing HL7 Messages
 
 This library provides an easy way to parse HL7 Messages v.2.x, text-based, no XML format.
