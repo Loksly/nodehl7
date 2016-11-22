@@ -11,6 +11,12 @@ Usage:
 npm install nodehl7 --save
 ```
 
+To run tests:
+```bash
+npm test
+
+```
+
 
 ```javascript
 	const Hl7lib = require('nodehl7');
