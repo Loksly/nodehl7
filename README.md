@@ -1,3 +1,8 @@
+
+ [![Known Vulnerabilities](https://snyk.io/test/github/loksly/nodehl7/badge.svg)](https://snyk.io/test/github/loksly/nodehl7)
+
+
+
 # nodehl7
 NodeJS Library for parsing HL7 Messages
 
