@@ -1,0 +1,8 @@
+{
+	"name": "PID",
+	"fields": ["Set ID – PID", "Patient ID", "Patient identifier list", "Alternate patient ID – PID", "Patient name", "Mother's maiden name",
+			"Date of birth", "Gender", "Patient alias", "Race", "Patient Address", "County code", "Phone number (home)", "Phone number –business",
+			"Primary language", "Marital status", "Religion", "Patient account number", "SSN number – patient", "Driver's license number – patient",
+			"Mother's identifier", "Ethnic group", "Birth place", "Multiple birth indicator", "Birth order", "Citizenship", "Veterans military status",
+			"Nationality", "Patient death date", "Patient death indicator"]
+}
