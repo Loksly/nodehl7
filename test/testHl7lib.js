@@ -26,7 +26,7 @@
 				hl7parser
 					.parseFile(path.join(__dirname, './testfiles/ADTA01.adm'),
 						function(err, message){
-							should(err).not.exist();
+                            expect(err).to.be.an('null');
 							expect(message).to.have.a.property('segments');
 							done();
 						}
@@ -36,8 +36,8 @@
 				hl7parser
 					.parseFile(path.join(__dirname, './testfiles/ADTA01.adm'),
 						function(err, message){
-							should(err).not.exist();
-							expect(message).to.have.a.property('segments');
+                            expect(err).to.be.an('null');
+                            expect(message).to.have.a.property('segments');
 							expect(message.get('MSH', 'Version ID')).equal('2.3.1');
 							done();
 						}
@@ -47,7 +47,7 @@
 				hl7parser
 					.parseFile(path.join(__dirname, './testfiles/ADTA01.adm'),
 						function(err, message){
-							should(err).not.exist();
+                            expect(err).to.be.an('null');
 							expect(message).to.have.a.property('segments');
 							message.set('MSH', 'Version ID', '2.3.2');
 							expect(message.get('MSH', 'Version ID')).equal('2.3.2');
@@ -68,10 +68,41 @@
 				hl7parser
 					.parseFile(path.join(__dirname, './testfiles/birp_ORUR01.adm'),
 						function(err, message){
-							should(err).not.exist;
+                            expect(err).to.be.an('null');
 							expect(message).to.have.a.property('segments');
 							//logger.log(message);
 							//expect(message.segments).to.have.a.property('segments');
+							done();
+						}
+					);
+            });
+
+			it('expect to parse all segments on small files', function(done){
+				hl7parser
+					.parseFile(path.join(__dirname, './testfiles/ADTA01.adm'),
+						function(err, message){
+                            expect(err).to.be.an('null');
+                            expect(message).to.have.a.property('segments');
+                            var expectedSegments = ['MSH', 'EVN', 'PID', 'NK1', 'PV1'];
+                            expectedSegments.forEach(function(segmentname){
+                                expect(message.get(segmentname)).to.be.an('object');
+                            });
+							done();
+						}
+					);
+			});
+			it('expect to parse all segments on large files', function(done){
+				hl7parser
+					.parseFile(path.join(__dirname, './testfiles/birp_ORUR01.adm'),
+						function(err, message){
+                            expect(err).to.be.an('null');
+                            expect(message).to.have.a.property('segments');
+                            expect(message.size()).equal(13);
+                            for (var i = 0; i < 13; i++){
+                                expect(message.getSegmentAt(i).typeofSegment).to.be.an('string');
+                                expect(message.getSegmentAt(i).order).equal(i);
+                                expect(message.getSegmentAt(i).parts).to.be.an('array');
+                            }
 							done();
 						}
 					);
