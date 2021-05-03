@@ -1,10 +1,10 @@
 {
   "name": "nodehl7",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "NodeJS Library for parsing HL7 Messages",
   "main": "lib/hl7.js",
   "scripts": {
-    "test": "node_modules/.bin/mocha"
+    "test": "npx mocha"
   },
   "repository": {
     "type": "git",
