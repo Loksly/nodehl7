@@ -1,6 +1,15 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [0.2.5] - 2021-05-04
+- Increase support for SPM segment. Thanks to @kapv89 https://github.com/Loksly/nodehl7/pull/10
+
+## [0.2.4] - 2021-05-03
+- Added support for SPM segment
+
+## [0.2.3] - 2021-05-03
+- Updated dependencies
+
 ## [0.2.2] - 2020-07-22
 - Updated mocha version
 - Updated chai version
