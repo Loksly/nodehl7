@@ -125,7 +125,7 @@ class HL7Segment {
             return obj;
         }
         else {
-            this.logger.error('ERROR, unkown segmentType: ' + this.typeofSegment);
+            this.logger.error('ERROR, unknown segmentType: ' + this.typeofSegment);
             return {};
         }
     }
@@ -181,7 +181,7 @@ const escapeChars = function (text, equivalences) {
 function validSegmentType(segmentname, ID, logger) {
     if (validSegmentsName.indexOf(segmentname) < 0) {
         if (typeof logger === 'object' && typeof logger.error === 'function') {
-            logger.error('Unkown segmentType (' + ID + '): ' + segmentname);
+            logger.error('Unknown segmentType (' + ID + '): ' + segmentname);
         }
         return (segmentname.length === 3);
     }
