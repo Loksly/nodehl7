@@ -238,8 +238,6 @@ class hl7Parser extends EventEmitter {
 		}
 		if (typeof this.options.fs === 'undefined'){
 			this.options.fs = fs;
-		}else if (typeof this.options.fs === 'string'){
-			this.options.fs = require(this.options.fs); /* @deprecated: dangerous, I will consider not support this functionality */
 		}
 		this.HL7Segment = HL7Segment;
 	}
