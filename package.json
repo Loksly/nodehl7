@@ -4,7 +4,8 @@
   "description": "NodeJS Library for parsing HL7 Messages",
   "main": "lib/hl7.js",
   "scripts": {
-    "test": "npx mocha"
+    "test": "npx mocha",
+    "coverage": "nyc --reporter=lcov --reporter=text --reporter=json npm test"
   },
   "repository": {
     "type": "git",
@@ -22,9 +23,26 @@
   "homepage": "https://github.com/Loksly/node-hl7#readme",
   "devDependencies": {
     "chai": "^6.2.2",
-    "mocha": "11.3.0"
+    "mocha": "11.3.0",
+    "nyc": "^17.1.0"
   },
   "dependencies": {
     "encoding": "^0.1.13"
+  },
+  "nyc": {
+    "include": [
+      "lib/**/*.js"
+    ],
+    "exclude": [
+      "test/**",
+      "node_modules/**"
+    ],
+    "reporter": [
+      "lcov",
+      "text",
+      "json"
+    ],
+    "all": true,
+    "check-coverage": false
   }
 }
