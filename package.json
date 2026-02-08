@@ -21,11 +21,10 @@
   },
   "homepage": "https://github.com/Loksly/node-hl7#readme",
   "devDependencies": {
-    "chai": "^4.2.0",
-    "encoding": "^0.1.12",
-    "mocha": "^10.2.0"
+    "chai": "^6.2.2",
+    "mocha": "11.3.0"
   },
   "dependencies": {
-    "encoding": "^0.1.12"
+    "encoding": "^0.1.13"
   }
 }
