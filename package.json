@@ -5,7 +5,7 @@
   "main": "lib/hl7.js",
   "scripts": {
     "test": "npx mocha",
-    "coverage": "nyc --reporter=lcov --reporter=text --reporter=json npm test"
+    "coverage": "npx nyc --reporter=lcov --reporter=text --reporter=json npm test"
   },
   "repository": {
     "type": "git",
