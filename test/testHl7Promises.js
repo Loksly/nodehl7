@@ -21,7 +21,7 @@
 		describe('Hl7Lib promise-based API test', function(){
 			var	hl7parser;
 			before(function(){
-				hl7parser = new Hl7lib(config.hl7parser);
+				hl7parser = new Hl7lib(config);
 			});
 
 			it('should be able to parse existing files using promises', async function(){

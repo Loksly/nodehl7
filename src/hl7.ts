@@ -279,11 +279,7 @@ class hl7Parser extends EventEmitter {
 						wrappedDone(null, hl7msg);
 					}
 					// Resolve promise
-					if (hl7msg) {
-						resolve(hl7msg);
-					} else {
-						reject(new Error('No message parsed'));
-					}
+					resolve(hl7msg!);
 				}
 			};
 

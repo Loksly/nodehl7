@@ -249,12 +249,7 @@ class hl7Parser extends events_1.EventEmitter {
                         wrappedDone(null, hl7msg);
                     }
                     // Resolve promise
-                    if (hl7msg) {
-                        resolve(hl7msg);
-                    }
-                    else {
-                        reject(new Error('No message parsed'));
-                    }
+                    resolve(hl7msg);
                 }
             };
             const segmentslines = messageContent.trim().split('\r');
