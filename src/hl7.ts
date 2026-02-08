@@ -472,4 +472,8 @@ function getSegmentsInformation(): void {
 
 getSegmentsInformation();
 
-export = hl7Parser;
+// CommonJS export
+module.exports = hl7Parser;
+
+// ES module default export for TypeScript
+export default hl7Parser;

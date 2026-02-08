@@ -3,11 +3,20 @@
   "version": "0.2.6",
   "description": "NodeJS Library for parsing HL7 Messages",
   "main": "dist/hl7.js",
-  "module": "dist/hl7.js",
+  "module": "dist/esm/hl7.js",
   "types": "dist/hl7.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/esm/hl7.js",
+      "require": "./dist/hl7.js",
+      "types": "./dist/hl7.d.ts"
+    }
+  },
   "scripts": {
-    "build": "tsc && npm run copy-segments",
-    "copy-segments": "cp -r src/segments dist/",
+    "build": "npm run build:cjs && npm run build:esm && npm run copy-segments",
+    "build:cjs": "tsc",
+    "build:esm": "tsc -p tsconfig.esm.json",
+    "copy-segments": "cp -r src/segments dist/ && cp -r src/segments dist/esm/",
     "prepare": "npm run build",
     "test": "npm run build && npx mocha",
     "coverage": "npm run build && npx nyc --reporter=lcov --reporter=text --reporter=json npm test"
