@@ -9,12 +9,108 @@ NodeJS Library for parsing HL7 Messages
 This library provides an easy way to parse HL7 Messages v.2.x, text-based, no XML format.
 Note there is another package named [node-hl7](https://github.com/ekryski/node-hl7) that provides a different API. 
 
+## Features
 
-Usage:
+- ✅ **TypeScript Support**: Full TypeScript definitions with type safety
+- ✅ **Promise-based API**: Modern async/await support with backward-compatible callbacks
+- ✅ **Dual Module Format**: Both CommonJS and ES Modules supported
+- ✅ **Event Emitter**: Subscribe to parse events
+- ✅ **HL7 v2.x**: Support for HL7 version 2.x text-based messages
+
+## Installation
 
 ```bash
 npm install nodehl7 --save
 ```
+
+## Quick Start
+
+### Using Promises (Recommended)
+
+```javascript
+const Hl7lib = require('nodehl7');
+const hl7parser = new Hl7lib();
+
+// Parse a file with async/await
+async function parseHL7File() {
+  try {
+    const message = await hl7parser.parseFile('./path/to/file.hl7');
+    
+    const pidSegment = message.get('PID');
+    const patientIDs = pidSegment.get('Patient identifier list');
+    
+    console.log(patientIDs);
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+// Parse message content directly
+async function parseHL7String() {
+  const hl7Content = "MSH|^~\\&|...";
+  
+  try {
+    const message = await hl7parser.parse(hl7Content, 'message-id');
+    console.log(message.get('MSH', 'Version ID'));
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+// Using .then() and .catch()
+hl7parser.parseFile('./path/to/file.hl7')
+  .then(message => {
+    console.log(message.get('MSH', 'Sending application'));
+  })
+  .catch(err => {
+    console.error(err);
+  });
+```
+
+### Using Callbacks (Legacy, still supported)
+
+```javascript
+const Hl7lib = require('nodehl7');
+const config = {
+  "mapping": false,
+  "profiling": true,
+  "debug": true,
+  "fileEncoding": "iso-8859-1"
+};
+
+let hl7parser = new Hl7lib(config);
+
+let callback = function(err, message){
+  if (err){
+    console.error(err);
+  } else {
+    let pidSegment = message.get('PID');
+    let patientIDs = pidSegment.get('Patient identifier list');
+    
+    console.log(patientIDs);
+  }
+};
+
+hl7parser.parseFile(path, callback);
+```
+
+### TypeScript Usage
+
+```typescript
+import Hl7Parser from 'nodehl7';
+
+const hl7parser = new Hl7Parser({
+  fileEncoding: 'iso-8859-1'
+});
+
+async function parseFile(filepath: string) {
+  const message = await hl7parser.parseFile(filepath);
+  const versionId = message.get('MSH', 'Version ID');
+  console.log(versionId);
+}
+```
+
+## Testing
 
 To run tests:
 ```bash
@@ -31,71 +127,156 @@ This will generate coverage reports in the `coverage/` directory:
 - `coverage/lcov-report/index.html` - HTML report for local viewing
 - `coverage/coverage-final.json` - JSON format for programmatic access
 
+## API Documentation
 
+### Hl7Parser
+
+An hl7Parser is an EventEmitter so it provides events like:
+
+- **error**: Whenever a new error happens.
+- **message**: Whenever a new message has been parsed.
+- **Event Type Code**: Events named after the _Event Type Code_ field from the _EVN_ Segment (e.g., _A01_, _A02_, _A03_). 
+
+#### Constructor
 
 ```javascript
-	const Hl7lib = require('nodehl7');
-	const config = {
-		"mapping": false,
-		"profiling": true,
-		"debug": true,
-		"fileEncoding": "iso-8859-1"
-	};
-
-	let hl7parser = new Hl7lib(config);
-
-	let callback = function(err, message){
-		if (err){
-			console.error(err);
-		} else {
-
-			let pidSegment = message.get('PID');
-			let patientIDs = pidSegment.get('Patient identifier list');
-
-			console.log(patientIDs);
-		}
-	};
-
-	hl7parser.parseFile(path, callback);
-
+new Hl7Parser(config?)
 ```
 
+**Configuration options:**
+- `mapping` (boolean): Enable field mapping
+- `profiling` (boolean): Enable profiling
+- `debug` (boolean): Enable debug mode
+- `fileEncoding` (string): File encoding (default: 'utf8', example: 'iso-8859-1')
+- `logger` (object): Custom logger object
+- `fs` (object): Custom filesystem object
 
-Api:
+#### Methods
 
-An hl7Parser is an eventEmitter so it provides events like:
+##### `parse(messageContent, ID, callback?)`
 
-- error: Whenever a new error happens.
-- message: Whenever a new message has been parsed.
-- "Event Type Code": I mean _A01_, _A02_, _A03_ or so. When a message is parsed it emit a event with the name of the field _Event Type Code_ from the _EVN_ Segment. 
+Parses an HL7 message string.
 
+**Returns:** `Promise<Hl7Message>`
 
-Hl7Parser methods:
-- parse(messageContent, ID, callback): method that will call callback whenever it ends parsing an string called messageContent.
-- parseFile(path, callback): method that will parse a file located in path with hl7 format.
+**Parameters:**
+- `messageContent` (string): The HL7 message content
+- `ID` (string): An identifier for the message
+- `callback` (function, optional): Callback function `(err, Hl7Message) => void`
 
-Both callbacks have the syntax:
 ```javascript
-function(err, Hl7Message)
+// Promise
+const message = await hl7parser.parse(messageContent, 'msg-001');
+
+// Callback
+hl7parser.parse(messageContent, 'msg-001', (err, message) => {
+  // ...
+});
 ```
 
+##### `parseFile(filepath, callback?)`
 
-Hl7Message methods:
+Parses an HL7 message from a file.
 
-- size(): returns the number of segments of the message.
-- get(segmentname): returns a Hl7Segment.
-- get(segmentname, fieldname): returns a field (take on count it can be both an string an array or null).
-- get(segmentname, fieldname, joinChar): returns the same as get(segmentname, fieldname) but in case it is an array then it is converted to an string using join with the _joinChar_ as separator. 
-- getSegmentAt(numberofsegment): returns the segment that was located on _numberofsegment_ position.
+**Returns:** `Promise<Hl7Message>`
 
+**Parameters:**
+- `filepath` (string): Path to the HL7 file
+- `callback` (function, optional): Callback function `(err, Hl7Message) => void`
 
-Hl7Segment methods:
-- get(fieldname): returns a field (take on count it can be both an string an array or null).
-- set(fieldname, value): sets this value at _fieldname_.
+```javascript
+// Promise
+const message = await hl7parser.parseFile('./file.hl7');
 
+// Callback
+hl7parser.parseFile('./file.hl7', (err, message) => {
+  // ...
+});
+```
 
+### Hl7Message
 
-This is the name of the fields:
+#### Methods
+
+- **`size()`**: Returns the number of segments in the message.
+- **`get(segmentname)`**: Returns an Hl7Segment.
+- **`get(segmentname, fieldname)`**: Returns a field value (can be a string, array, or null).
+- **`get(segmentname, fieldname, joinChar)`**: Returns the field value. If it's an array, joins it using `joinChar` as separator.
+- **`getSegmentAt(index)`**: Returns the segment at the specified position.
+- **`getSegments(segmentname)`**: Returns all segments with the specified name.
+
+```javascript
+const message = await hl7parser.parseFile('./file.hl7');
+
+// Get a segment
+const pidSegment = message.get('PID');
+
+// Get a field value
+const patientName = message.get('PID', 'Patient name');
+
+// Get a field and join if array
+const phoneNumbers = message.get('PID', 'Phone number (home)', ' / ');
+
+// Get segment by index
+const firstSegment = message.getSegmentAt(0);
+
+// Get number of segments
+const segmentCount = message.size();
+```
+
+### Hl7Segment
+
+#### Methods
+
+- **`get(fieldname)`**: Returns a field value (can be a string, array, or null).
+- **`set(fieldname, value)`**: Sets the value of a field.
+- **`toMappedObject(compact?)`**: Converts the segment to a JavaScript object.
+
+```javascript
+const pidSegment = message.get('PID');
+
+// Get field value
+const patientId = pidSegment.get('Patient identifier list');
+
+// Set field value
+pidSegment.set('Patient name', 'John Doe');
+
+// Convert to object
+const pidObject = pidSegment.toMappedObject();
+```
+
+## Supported Segments
+
+The library includes field mappings for the following HL7 v2.x segments:
+
+- **MSH** - Message Header
+- **EVN** - Event Type
+- **PID** - Patient Identification
+- **PV1** - Patient Visit
+- **PV2** - Patient Visit - Additional Information
+- **OBX** - Observation/Result
+- **DG1** - Diagnosis
+- **ORC** - Common Order
+- **PR1** - Procedures
+- **PD1** - Patient Additional Demographic
+- **AL1** - Patient Allergy Information
+- **MRG** - Merge Patient Information
+- **GT1** - Guarantor
+- **OBR** - Observation Request
+- **NTE** - Notes and Comments
+- **NK1** - Next of Kin / Associated Parties
+- **IN1** - Insurance
+- **IN2** - Insurance Additional Information
+- **FT1** - Financial Transaction
+- **INV** - Inventory Detail
+- **SAC** - Specimen Container Detail
+- **SPM** - Specimen
+
+### Field Mappings Reference
+
+<details>
+<summary>Click to expand complete field mappings</summary>
+
 ```javascript
 HL7Segment.prototype.segmentsFields = {
 		'MSH':
@@ -182,3 +363,41 @@ HL7Segment.prototype.segmentsFields = {
 ```
 
 
+
+</details>
+
+## Migration Guide
+
+### From Callbacks to Promises
+
+If you're upgrading from an older version, the API is fully backward compatible. You can migrate to promises gradually:
+
+**Before (Callbacks):**
+```javascript
+hl7parser.parseFile('./file.hl7', (err, message) => {
+  if (err) return console.error(err);
+  console.log(message.get('MSH', 'Version ID'));
+});
+```
+
+**After (Promises):**
+```javascript
+try {
+  const message = await hl7parser.parseFile('./file.hl7');
+  console.log(message.get('MSH', 'Version ID'));
+} catch (err) {
+  console.error(err);
+}
+```
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+MIT
+
+## Credits
+
+Original author: [Loksly](https://github.com/Loksly)

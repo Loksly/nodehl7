@@ -1,0 +1,9 @@
+{
+	"name": "OBR",
+	"fields": ["Set ID - OBR", "Placer Order Number", "Filler Order Number", "Universal Service ID", "Priority", "Requested Date/time", "Observation Date/time", "Observation End Date/time",
+			"Collection Volume", "Collector Identifier", "Specimen Action Code", "Danger Code", "Relevant Clinical Info", "Specimen Received Date/Time", "Specimen Source", "Ordering Provider",
+			"Order Callback Phone Number", "Placer field 1", "Placer field 2", "Filler Field 1", "Filler Field 2", "Results Rpt/Status Chng - Date/Time", "Charge to Practice", "Diagnostic Serv Sect ID",
+			"Result Status", "Parent Result", "Quantity/Timing", "Result Copies To", "Parent", "Transportation Mode", "Reason for Study", "Principal Result Interpreter", "Assistant Result Interpreter",
+			"Technician", "Transcriptionist", "Scheduled Date/Time", "Number of Sample Containers", "Transport Logistics of Collected Sample", "Collector's Comment", "Transport Arrangement Responsibility",
+			"Transport Arranged", "Escort Required", "Planned Patient Transport Comment"]
+}

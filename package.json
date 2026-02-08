@@ -2,10 +2,24 @@
   "name": "nodehl7",
   "version": "0.2.6",
   "description": "NodeJS Library for parsing HL7 Messages",
-  "main": "lib/hl7.js",
+  "main": "dist/hl7.js",
+  "module": "dist/esm/hl7.js",
+  "types": "dist/hl7.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/esm/hl7.js",
+      "require": "./dist/hl7.js",
+      "types": "./dist/hl7.d.ts"
+    }
+  },
   "scripts": {
-    "test": "npx mocha",
-    "coverage": "npx nyc --reporter=lcov --reporter=text --reporter=json npm test"
+    "build": "npm run build:cjs && npm run build:esm && npm run copy-segments",
+    "build:cjs": "tsc",
+    "build:esm": "tsc -p tsconfig.esm.json",
+    "copy-segments": "cp -r src/segments dist/ && cp -r src/segments dist/esm/",
+    "prepare": "npm run build",
+    "test": "npm run build && npx mocha",
+    "coverage": "npm run build && npx nyc --reporter=lcov --reporter=text --reporter=json npm test"
   },
   "repository": {
     "type": "git",
@@ -22,20 +36,23 @@
   },
   "homepage": "https://github.com/Loksly/node-hl7#readme",
   "devDependencies": {
+    "@types/node": "^25.2.2",
     "chai": "^6.2.2",
     "mocha": "11.3.0",
-    "nyc": "^17.1.0"
+    "nyc": "^17.1.0",
+    "typescript": "^5.9.3"
   },
   "dependencies": {
     "encoding": "^0.1.13"
   },
   "nyc": {
     "include": [
-      "lib/**/*.js"
+      "dist/**/*.js"
     ],
     "exclude": [
       "test/**",
-      "node_modules/**"
+      "node_modules/**",
+      "src/**"
     ],
     "reporter": [
       "lcov",
