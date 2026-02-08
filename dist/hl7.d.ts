@@ -45,8 +45,8 @@ declare class hl7Parser extends EventEmitter {
     readonly IOERROR: number;
     HL7Segment: typeof HL7Segment;
     constructor(options?: HL7ParserOptions);
-    parse(messageContent: string, ID: string, wrappedDone?: (err: any, hl7msg?: Hl7Message) => void): void;
-    parseFile(filepath: string, wrappedDone?: (err: any, message?: Hl7Message) => void): void;
+    parse(messageContent: string, ID: string, wrappedDone?: (err: any, hl7msg?: Hl7Message) => void): Promise<Hl7Message>;
+    parseFile(filepath: string, wrappedDone?: (err: any, message?: Hl7Message) => void): Promise<Hl7Message>;
 }
 export default hl7Parser;
 //# sourceMappingURL=hl7.d.ts.map

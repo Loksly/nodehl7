@@ -216,185 +216,210 @@ class hl7Parser extends events_1.EventEmitter {
     }
     parse(messageContent, ID, wrappedDone) {
         const self = this;
-        const fn = function (donefn, resultValue) {
-            return function () {
-                donefn(null, resultValue);
+        return new Promise((resolve, reject) => {
+            const fn = function (donefn, resultValue) {
+                return function () {
+                    donefn(null, resultValue);
+                };
             };
-        };
-        const done = function (err, hl7msg) {
-            if (err) {
-                if (self.listeners('error').length > 0) {
-                    self.emit('error', err);
+            const done = function (err, hl7msg) {
+                if (err) {
+                    if (self.listeners('error').length > 0) {
+                        self.emit('error', err);
+                    }
+                    // Call callback if provided
+                    if (wrappedDone) {
+                        wrappedDone(err, hl7msg);
+                    }
+                    // Reject promise
+                    reject(err);
                 }
+                else {
+                    if (self.listeners('message').length > 0) {
+                        self.emit('message', hl7msg);
+                    }
+                    if (hl7msg) {
+                        const tipoMsg = hl7msg.get('EVN', 'Event Type Code');
+                        if (tipoMsg !== null && self.listeners(tipoMsg).length > 0) {
+                            self.emit(tipoMsg, hl7msg);
+                        }
+                    }
+                    // Call callback if provided
+                    if (wrappedDone) {
+                        wrappedDone(null, hl7msg);
+                    }
+                    // Resolve promise
+                    if (hl7msg) {
+                        resolve(hl7msg);
+                    }
+                    else {
+                        reject(new Error('No message parsed'));
+                    }
+                }
+            };
+            const segmentslines = messageContent.trim().split('\r');
+            const result = [];
+            if (segmentslines.length === 0) {
+                done({ errortype: self.EMPTY });
             }
             else {
-                if (self.listeners('message').length > 0) {
-                    self.emit('message', hl7msg);
+                const delimiters = getDelimiters(segmentslines[0]);
+                if (!delimiters) {
+                    done({ errortype: self.INVALID });
+                    return;
                 }
-                if (hl7msg) {
-                    const tipoMsg = hl7msg.get('EVN', 'Event Type Code');
-                    if (tipoMsg !== null && self.listeners(tipoMsg).length > 0) {
-                        self.emit(tipoMsg, hl7msg);
+                //@TODO: http://docs.intersystems.com/ens20131/csp/docbook/DocBook.UI.Page.cls?KEY=EHL72_escape_sequences
+                const equivalences = [
+                    {
+                        key: new RegExp(escapeRegExp(delimiters.escapeChar + 'F' + delimiters.escapeChar), 'g'),
+                        value: delimiters.subComposite // |
+                    },
+                    {
+                        key: new RegExp(escapeRegExp(delimiters.escapeChar + 'S' + delimiters.escapeChar), 'g'),
+                        value: delimiters.composite // |
+                    },
+                    {
+                        key: new RegExp(escapeRegExp(delimiters.escapeChar + 'R' + delimiters.escapeChar), 'g'),
+                        value: delimiters.repetitions // ~
+                    },
+                    {
+                        key: new RegExp(escapeRegExp(delimiters.escapeChar + 'E' + delimiters.escapeChar), 'g'),
+                        value: delimiters.escapeChar // \
+                    },
+                    {
+                        key: new RegExp(escapeRegExp(delimiters.escapeChar + 'T' + delimiters.escapeChar), 'g'),
+                        value: delimiters.subComponent // &
+                    },
+                    {
+                        key: new RegExp(escapeRegExp(delimiters.escapeChar + 'X000d' + delimiters.escapeChar), 'g'),
+                        value: '\r'
+                    },
+                    {
+                        key: new RegExp(escapeRegExp(delimiters.escapeChar + 'X0d' + delimiters.escapeChar), 'g'),
+                        value: '\r'
+                    }
+                ];
+                let previousTypeOfSegment = '', previousparts = [], previousorder = -1;
+                for (let segmentnumber = 0, segmentmax = segmentslines.length; segmentnumber < segmentmax; segmentnumber++) {
+                    const line = segmentslines[segmentnumber].trim();
+                    if (line !== '') {
+                        const parts = line.split(delimiters.composite);
+                        if (parts.length > 0) {
+                            let typeofSegment = parts.shift().trim();
+                            if (!validSegmentType(typeofSegment, ID, self.logger)) {
+                                if (isRecoverable(previousTypeOfSegment, previousparts, segmentnumber === 0)) {
+                                    previousparts[previousparts.length - 1] += '\\X000a\\' + typeofSegment;
+                                    if (parts.length > 0) {
+                                        previousparts = previousparts.concat(parts);
+                                    }
+                                    result[result.length - 1] = new HL7Segment(previousTypeOfSegment, previousorder, previousparts);
+                                    continue;
+                                }
+                                else {
+                                    done({ errortype: self.INVALID });
+                                    return;
+                                }
+                            }
+                            for (let numberOfPart = 0, numberOfParts = parts.length; numberOfPart < numberOfParts; numberOfPart++) {
+                                const part = parts[numberOfPart];
+                                if (((segmentnumber === 0 && numberOfPart !== 0) || segmentnumber !== 0) && part.indexOf(delimiters.subComposite) >= 0) {
+                                    let subdivisions = part.split(delimiters.subComposite);
+                                    for (let subdivisionsIdx = 0, numberOfSubdivisions = subdivisions.length; subdivisionsIdx < numberOfSubdivisions; subdivisionsIdx++) {
+                                        subdivisions[subdivisionsIdx] = escapeChars(subdivisions[subdivisionsIdx], equivalences);
+                                    }
+                                    parts[numberOfPart] = subdivisions;
+                                }
+                                else {
+                                    parts[numberOfPart] = escapeChars(part, equivalences);
+                                }
+                            }
+                            result.push(new HL7Segment(typeofSegment, previousorder + 1, parts));
+                            previousTypeOfSegment = typeofSegment;
+                            previousparts = parts;
+                            previousorder = previousorder + 1;
+                        }
                     }
                 }
+                const r = new Hl7Message(result, delimiters, ID);
+                process.nextTick(fn(done, r));
             }
-            if (wrappedDone) {
-                wrappedDone(err, hl7msg);
-            }
-        };
-        const segmentslines = messageContent.trim().split('\r');
-        const result = [];
-        if (segmentslines.length === 0) {
-            done({ errortype: self.EMPTY });
-        }
-        else {
-            const delimiters = getDelimiters(segmentslines[0]);
-            if (!delimiters) {
-                done({ errortype: self.INVALID });
-                return;
-            }
-            //@TODO: http://docs.intersystems.com/ens20131/csp/docbook/DocBook.UI.Page.cls?KEY=EHL72_escape_sequences
-            const equivalences = [
-                {
-                    key: new RegExp(escapeRegExp(delimiters.escapeChar + 'F' + delimiters.escapeChar), 'g'),
-                    value: delimiters.subComposite // |
-                },
-                {
-                    key: new RegExp(escapeRegExp(delimiters.escapeChar + 'S' + delimiters.escapeChar), 'g'),
-                    value: delimiters.composite // |
-                },
-                {
-                    key: new RegExp(escapeRegExp(delimiters.escapeChar + 'R' + delimiters.escapeChar), 'g'),
-                    value: delimiters.repetitions // ~
-                },
-                {
-                    key: new RegExp(escapeRegExp(delimiters.escapeChar + 'E' + delimiters.escapeChar), 'g'),
-                    value: delimiters.escapeChar // \
-                },
-                {
-                    key: new RegExp(escapeRegExp(delimiters.escapeChar + 'T' + delimiters.escapeChar), 'g'),
-                    value: delimiters.subComponent // &
-                },
-                {
-                    key: new RegExp(escapeRegExp(delimiters.escapeChar + 'X000d' + delimiters.escapeChar), 'g'),
-                    value: '\r'
-                },
-                {
-                    key: new RegExp(escapeRegExp(delimiters.escapeChar + 'X0d' + delimiters.escapeChar), 'g'),
-                    value: '\r'
-                }
-            ];
-            let previousTypeOfSegment = '', previousparts = [], previousorder = -1;
-            for (let segmentnumber = 0, segmentmax = segmentslines.length; segmentnumber < segmentmax; segmentnumber++) {
-                const line = segmentslines[segmentnumber].trim();
-                if (line !== '') {
-                    const parts = line.split(delimiters.composite);
-                    if (parts.length > 0) {
-                        let typeofSegment = parts.shift().trim();
-                        if (!validSegmentType(typeofSegment, ID, self.logger)) {
-                            if (isRecoverable(previousTypeOfSegment, previousparts, segmentnumber === 0)) {
-                                previousparts[previousparts.length - 1] += '\\X000a\\' + typeofSegment;
-                                if (parts.length > 0) {
-                                    previousparts = previousparts.concat(parts);
-                                }
-                                result[result.length - 1] = new HL7Segment(previousTypeOfSegment, previousorder, previousparts);
-                                continue;
-                            }
-                            else {
-                                done({ errortype: self.INVALID });
-                                return;
-                            }
-                        }
-                        for (let numberOfPart = 0, numberOfParts = parts.length; numberOfPart < numberOfParts; numberOfPart++) {
-                            const part = parts[numberOfPart];
-                            if (((segmentnumber === 0 && numberOfPart !== 0) || segmentnumber !== 0) && part.indexOf(delimiters.subComposite) >= 0) {
-                                let subdivisions = part.split(delimiters.subComposite);
-                                for (let subdivisionsIdx = 0, numberOfSubdivisions = subdivisions.length; subdivisionsIdx < numberOfSubdivisions; subdivisionsIdx++) {
-                                    subdivisions[subdivisionsIdx] = escapeChars(subdivisions[subdivisionsIdx], equivalences);
-                                }
-                                parts[numberOfPart] = subdivisions;
-                            }
-                            else {
-                                parts[numberOfPart] = escapeChars(part, equivalences);
-                            }
-                        }
-                        result.push(new HL7Segment(typeofSegment, previousorder + 1, parts));
-                        previousTypeOfSegment = typeofSegment;
-                        previousparts = parts;
-                        previousorder = previousorder + 1;
-                    }
-                }
-            }
-            const r = new Hl7Message(result, delimiters, ID);
-            process.nextTick(fn(done, r));
-        }
+        });
     }
     parseFile(filepath, wrappedDone) {
         const self = this;
         const fileEncoding = self.options.fileEncoding;
-        self.options.fs.stat(filepath, function (err, stats) {
-            if (err) {
-                if (self.listeners('error').length > 0) {
-                    self.emit('error', err);
-                }
-                if (typeof wrappedDone === 'function') {
-                    wrappedDone(err);
-                }
-                return;
-            }
-            self.options.fs.open(filepath, 'r', function (erro, fd) {
-                if (erro || !fd) {
-                    if (fd) {
-                        self.options.fs.close(fd);
-                    }
+        return new Promise((resolve, reject) => {
+            self.options.fs.stat(filepath, function (err, stats) {
+                if (err) {
                     if (self.listeners('error').length > 0) {
-                        self.emit('error', erro);
+                        self.emit('error', err);
                     }
                     if (typeof wrappedDone === 'function') {
-                        wrappedDone(erro);
+                        wrappedDone(err);
                     }
+                    reject(err);
                     return;
                 }
-                const size = stats.size;
-                if (size <= 0) {
-                    if (fd) {
-                        self.options.fs.close(fd);
-                    }
-                    const error = { msg: 'Size <=0 (' + size + ')', friendlyID: filepath };
-                    if (self.listeners('error').length > 0) {
-                        self.emit('error', error);
-                    }
-                    if (typeof wrappedDone === 'function') {
-                        wrappedDone(error);
-                    }
-                    return;
-                }
-                const readBuffer = Buffer.alloc(size);
-                const bufferOffset = 0;
-                const bufferLength = readBuffer.length;
-                const filePosition = 0;
-                self.options.fs.read(fd, readBuffer, bufferOffset, bufferLength, filePosition, function (fail, readBytes) {
-                    if (fd) {
-                        self.options.fs.close(fd, function (err) {
-                            if (err) {
-                                self.logger.error(err);
-                            }
-                        });
-                    }
-                    if (fail) {
-                        const ioerro = { errortype: self.IOERROR, details: fail };
+                self.options.fs.open(filepath, 'r', function (erro, fd) {
+                    if (erro || !fd) {
+                        if (fd) {
+                            self.options.fs.close(fd);
+                        }
                         if (self.listeners('error').length > 0) {
-                            self.emit('error', ioerro);
+                            self.emit('error', erro);
                         }
                         if (typeof wrappedDone === 'function') {
-                            wrappedDone(ioerro);
+                            wrappedDone(erro);
                         }
+                        reject(erro);
                         return;
                     }
-                    if (readBytes > 0) {
-                        const msg = fileEncoding !== 'utf8' ? encoding.convert(readBuffer, 'utf8', fileEncoding).toString('utf8') : readBuffer.toString('utf8');
-                        self.parse(msg, filepath, wrappedDone);
+                    const size = stats.size;
+                    if (size <= 0) {
+                        if (fd) {
+                            self.options.fs.close(fd);
+                        }
+                        const error = { msg: 'Size <=0 (' + size + ')', friendlyID: filepath };
+                        if (self.listeners('error').length > 0) {
+                            self.emit('error', error);
+                        }
+                        if (typeof wrappedDone === 'function') {
+                            wrappedDone(error);
+                        }
+                        reject(error);
+                        return;
                     }
+                    const readBuffer = Buffer.alloc(size);
+                    const bufferOffset = 0;
+                    const bufferLength = readBuffer.length;
+                    const filePosition = 0;
+                    self.options.fs.read(fd, readBuffer, bufferOffset, bufferLength, filePosition, function (fail, readBytes) {
+                        if (fd) {
+                            self.options.fs.close(fd, function (err) {
+                                if (err) {
+                                    self.logger.error(err);
+                                }
+                            });
+                        }
+                        if (fail) {
+                            const ioerro = { errortype: self.IOERROR, details: fail };
+                            if (self.listeners('error').length > 0) {
+                                self.emit('error', ioerro);
+                            }
+                            if (typeof wrappedDone === 'function') {
+                                wrappedDone(ioerro);
+                            }
+                            reject(ioerro);
+                            return;
+                        }
+                        if (readBytes > 0) {
+                            const msg = fileEncoding !== 'utf8' ? encoding.convert(readBuffer, 'utf8', fileEncoding).toString('utf8') : readBuffer.toString('utf8');
+                            // Parse returns a promise now, so we need to handle it
+                            self.parse(msg, filepath, wrappedDone)
+                                .then(resolve)
+                                .catch(reject);
+                        }
+                    });
                 });
             });
         });

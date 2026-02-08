@@ -242,36 +242,50 @@ class hl7Parser extends EventEmitter {
 		this.HL7Segment = HL7Segment;
 	}
 
-	parse(messageContent: string, ID: string, wrappedDone?: (err: any, hl7msg?: Hl7Message) => void): void {
+	parse(messageContent: string, ID: string, wrappedDone?: (err: any, hl7msg?: Hl7Message) => void): Promise<Hl7Message> {
 		const self = this;
 
-		const fn = function(donefn: (err: any, result?: any) => void, resultValue: any){
-			return function(){
-				donefn(null, resultValue);
+		return new Promise<Hl7Message>((resolve, reject) => {
+			const fn = function(donefn: (err: any, result?: any) => void, resultValue: any){
+				return function(){
+					donefn(null, resultValue);
+				};
 			};
-		};
 
-		const done = function(err: any, hl7msg?: Hl7Message){
-			if (err){
-				if (self.listeners('error').length > 0){
-					self.emit('error', err);
-				}
-			}else {
-				if (self.listeners('message').length > 0) {
-					self.emit('message', hl7msg);
-				}
-				if (hl7msg) {
-					const tipoMsg = hl7msg.get('EVN', 'Event Type Code');
+			const done = function(err: any, hl7msg?: Hl7Message){
+				if (err){
+					if (self.listeners('error').length > 0){
+						self.emit('error', err);
+					}
+					// Call callback if provided
+					if (wrappedDone){
+						wrappedDone(err, hl7msg);
+					}
+					// Reject promise
+					reject(err);
+				}else {
+					if (self.listeners('message').length > 0) {
+						self.emit('message', hl7msg);
+					}
+					if (hl7msg) {
+						const tipoMsg = hl7msg.get('EVN', 'Event Type Code');
 
-					if (tipoMsg !== null && self.listeners(tipoMsg).length > 0){
-						self.emit(tipoMsg, hl7msg);
+						if (tipoMsg !== null && self.listeners(tipoMsg).length > 0){
+							self.emit(tipoMsg, hl7msg);
+						}
+					}
+					// Call callback if provided
+					if (wrappedDone){
+						wrappedDone(null, hl7msg);
+					}
+					// Resolve promise
+					if (hl7msg) {
+						resolve(hl7msg);
+					} else {
+						reject(new Error('No message parsed'));
 					}
 				}
-			}
-			if (wrappedDone){
-				wrappedDone(err, hl7msg);
-			}
-		};
+			};
 
 
 		const segmentslines = messageContent.trim().split('\r');
@@ -367,79 +381,89 @@ class hl7Parser extends EventEmitter {
 			const r = new Hl7Message(result, delimiters, ID);
 			process.nextTick(fn(done, r));
 		}
+		});
 	}
 
-	parseFile(filepath: string, wrappedDone?: (err: any, message?: Hl7Message) => void): void {
+	parseFile(filepath: string, wrappedDone?: (err: any, message?: Hl7Message) => void): Promise<Hl7Message> {
 		const self = this;
 		const fileEncoding = self.options.fileEncoding;
 
-		self.options.fs.stat(filepath, function(err: any, stats: any) {
-			if (err){
-				if (self.listeners('error').length > 0){
-					self.emit('error', err);
+		return new Promise<Hl7Message>((resolve, reject) => {
+			self.options.fs.stat(filepath, function(err: any, stats: any) {
+				if (err){
+					if (self.listeners('error').length > 0){
+						self.emit('error', err);
+					}
+					if (typeof wrappedDone === 'function'){
+						wrappedDone(err);
+					}
+					reject(err);
+					return;
 				}
-				if (typeof wrappedDone === 'function'){
-					wrappedDone(err);
-				}
-				return;
-			}
 
-			self.options.fs.open(filepath, 'r', function(erro: any, fd: any) {
-				if (erro || !fd) {
-					if (fd){
-						self.options.fs.close(fd);
+				self.options.fs.open(filepath, 'r', function(erro: any, fd: any) {
+					if (erro || !fd) {
+						if (fd){
+							self.options.fs.close(fd);
+						}
+						if (self.listeners('error').length > 0){
+							self.emit('error', erro);
+						}
+						if (typeof wrappedDone === 'function'){
+							wrappedDone(erro);
+						}
+						reject(erro);
+						return;
 					}
-					if (self.listeners('error').length > 0){
-						self.emit('error', erro);
+					const size = stats.size;
+					if (size <= 0){
+						if (fd){
+							self.options.fs.close(fd);
+						}
+						const error = { msg: 'Size <=0 (' + size + ')', friendlyID: filepath};
+						if (self.listeners('error').length > 0){
+							self.emit('error', error);
+						}
+						if (typeof wrappedDone === 'function'){
+							wrappedDone(error);
+						}
+						reject(error);
+						return;
 					}
-					if (typeof wrappedDone === 'function'){
-						wrappedDone(erro);
-					}
-					return;
-				}
-				const size = stats.size;
-				if (size <= 0){
-					if (fd){
-						self.options.fs.close(fd);
-					}
-					const error = { msg: 'Size <=0 (' + size + ')', friendlyID: filepath};
-					if (self.listeners('error').length > 0){
-						self.emit('error', error);
-					}
-					if (typeof wrappedDone === 'function'){
-						wrappedDone(error);
-					}
-					return;
-				}
-				const readBuffer = Buffer.alloc(size);
-				const bufferOffset = 0;
-				const bufferLength = readBuffer.length;
-				const filePosition = 0;
-				self.options.fs.read(fd, readBuffer, bufferOffset, bufferLength, filePosition,
-					function (fail: any, readBytes: number) {
-						if (fd) {
-							self.options.fs.close(fd, function(err: any){
-								if (err){
-									self.logger.error(err);
+					const readBuffer = Buffer.alloc(size);
+					const bufferOffset = 0;
+					const bufferLength = readBuffer.length;
+					const filePosition = 0;
+					self.options.fs.read(fd, readBuffer, bufferOffset, bufferLength, filePosition,
+						function (fail: any, readBytes: number) {
+							if (fd) {
+								self.options.fs.close(fd, function(err: any){
+									if (err){
+										self.logger.error(err);
+									}
+								});
+							}
+							if (fail) {
+								const ioerro = { errortype: self.IOERROR, details: fail };
+								if (self.listeners('error').length > 0){
+									self.emit('error', ioerro);
 								}
-							});
-						}
-						if (fail) {
-							const ioerro = { errortype: self.IOERROR, details: fail };
-							if (self.listeners('error').length > 0){
-								self.emit('error', ioerro);
+								if (typeof wrappedDone === 'function'){
+									wrappedDone(ioerro);
+								}
+								reject(ioerro);
+								return;
 							}
-							if (typeof wrappedDone === 'function'){
-								wrappedDone(ioerro);
+							if (readBytes > 0) {
+								const msg = fileEncoding !== 'utf8' ? encoding.convert(readBuffer, 'utf8', fileEncoding).toString('utf8') : readBuffer.toString('utf8');
+								// Parse returns a promise now, so we need to handle it
+								self.parse(msg, filepath, wrappedDone)
+									.then(resolve)
+									.catch(reject);
 							}
-							return;
 						}
-						if (readBytes > 0) {
-							const msg = fileEncoding !== 'utf8' ? encoding.convert(readBuffer, 'utf8', fileEncoding).toString('utf8') : readBuffer.toString('utf8');
-							self.parse( msg, filepath, wrappedDone);
-						}
-					}
-				);
+					);
+				});
 			});
 		});
 	}
