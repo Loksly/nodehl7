@@ -19,8 +19,18 @@ npm install nodehl7 --save
 To run tests:
 ```bash
 npm test
-
 ```
+
+To run tests with code coverage:
+```bash
+npm run coverage
+```
+
+This will generate coverage reports in the `coverage/` directory:
+- `coverage/lcov.info` - LCOV format for CI/GitHub Actions integration
+- `coverage/lcov-report/index.html` - HTML report for local viewing
+- `coverage/coverage-final.json` - JSON format for programmatic access
+
 
 
 ```javascript
