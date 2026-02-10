@@ -247,30 +247,118 @@ const pidObject = pidSegment.toMappedObject();
 
 ## Supported Segments
 
-The library includes field mappings for the following HL7 v2.x segments:
+The library includes field mappings for **81 HL7 v2.x segments**, providing comprehensive support for various healthcare message types:
 
+### Message Structure & Control (10 segments)
 - **MSH** - Message Header
-- **EVN** - Event Type
+- **MSA** - Message Acknowledgment
+- **ERR** - Error
+- **BHS** - Batch Header Segment
+- **BTS** - Batch Trailer Segment
+- **FHS** - File Header Segment
+- **FTS** - File Trailer Segment
+- **DSC** - Continuation Pointer
+- **DSP** - Display Data
+- **NDS** - Notification Detail
+
+### Patient Demographics & Administration (13 segments)
 - **PID** - Patient Identification
+- **PD1** - Patient Additional Demographic
+- **NK1** - Next of Kin / Associated Parties
 - **PV1** - Patient Visit
 - **PV2** - Patient Visit - Additional Information
-- **OBX** - Observation/Result
-- **DG1** - Diagnosis
-- **ORC** - Common Order
-- **PR1** - Procedures
-- **PD1** - Patient Additional Demographic
-- **AL1** - Patient Allergy Information
 - **MRG** - Merge Patient Information
-- **GT1** - Guarantor
+- **DB1** - Disability
+- **ACC** - Accident
+- **AL1** - Patient Allergy Information
+- **UB1** - UB82 Data
+- **UB2** - UB92 Data
+- **DRG** - Diagnosis Related Group
+- **EVN** - Event Type
+
+### Orders & Observations (10 segments)
+- **ORC** - Common Order
 - **OBR** - Observation Request
+- **OBX** - Observation/Result
 - **NTE** - Notes and Comments
-- **NK1** - Next of Kin / Associated Parties
+- **TQ1** - Timing/Quantity
+- **TQ2** - Timing/Quantity Relationship
+- **CTI** - Clinical Trial Identification
+- **FT1** - Financial Transaction
+- **BLG** - Billing
+- **ABS** - Abstract
+
+### Clinical Procedures & Diagnosis (4 segments)
+- **PR1** - Procedures
+- **DG1** - Diagnosis
+- **GOL** - Goal Detail
+- **PRB** - Problem Details
+
+### Pharmacy & Medications (7 segments)
+- **RXA** - Pharmacy/Treatment Administration
+- **RXD** - Pharmacy/Treatment Dispense
+- **RXE** - Pharmacy/Treatment Encoded Order
+- **RXG** - Pharmacy/Treatment Give
+- **RXO** - Pharmacy/Treatment Order
+- **RXC** - Pharmacy/Treatment Component Order
+- **RXR** - Pharmacy/Treatment Route
+
+### Scheduling & Resources (6 segments)
+- **SCH** - Scheduling Activity Information
+- **AIG** - Appointment Information - General Resource
+- **AIL** - Appointment Information - Location Resource
+- **AIP** - Appointment Information - Personnel Resource
+- **AIS** - Appointment Information - Service
+- **RGS** - Resource Group
+
+### Staff & Personnel (3 segments)
+- **STF** - Staff Identification
+- **PRA** - Practitioner Detail
+- **ROL** - Role
+
+### Financial & Insurance (3 segments)
+- **GT1** - Guarantor
 - **IN1** - Insurance
 - **IN2** - Insurance Additional Information
-- **FT1** - Financial Transaction
-- **INV** - Inventory Detail
-- **SAC** - Specimen Container Detail
+
+### Query & Response (6 segments)
+- **QRD** - Query Definition
+- **QRF** - Query Filter
+- **URD** - Results/Unsolicited Display Update Definition
+- **URS** - Unsolicited Selection
+
+### Master Files & Observations (7 segments)
+- **OM1** - General Segment
+- **OM2** - Numeric Observation
+- **OM3** - Categorical Service/Test/Observation
+- **OM4** - Observations that Require Specimens
+- **OM5** - Observation Batteries
+- **OM6** - Observations that are Calculated
+- **OM7** - Additional Basic Attributes
+
+### Documents & Reports (3 segments)
+- **TXA** - Transcription Document Header
+- **PTH** - Pathway
+- **VAR** - Variance
+
+### Dietary (2 segments)
+- **ODS** - Dietary Orders, Supplements, Preferences
+- **ODT** - Diet Tray Instructions
+
+### Specimen & Inventory (3 segments)
 - **SPM** - Specimen
+- **SAC** - Specimen Container Detail
+- **INV** - Inventory Detail
+
+### Product Experience & Safety (4 segments)
+- **PEO** - Product Experience Observation
+- **PCR** - Possible Causal Relationship
+- **PSH** - Product Summary Header
+- **PDC** - Product Detail Country
+
+### Facility & Security (2 segments)
+- **FAC** - Facility
+- **CER** - Certificate Data
 
 ### Field Mappings Reference
 

@@ -1,0 +1,4 @@
+{
+	"name": "BTS",
+	"fields": ["Batch Message Count", "Batch Comment", "Batch Totals"]
+}

@@ -1,0 +1,4 @@
+{
+	"name": "FTS",
+	"fields": ["File Batch Count", "File Trailer Comment"]
+}
