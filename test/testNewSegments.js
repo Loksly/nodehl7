@@ -111,4 +111,52 @@ describe('New segments support test', function() {
 		expect(segment.segmentsFields['ACC']).to.be.an('array');
 		expect(segment.segmentsFields['DB1']).to.be.an('array');
 	});
+
+	it('should support financial/billing segments (UB1, UB2, BLG, ABS)', function() {
+		const hl7parser = new Hl7Parser();
+		const segment = new hl7parser.HL7Segment('UB1', 0, ['test']);
+		
+		expect(segment.segmentsFields['UB1']).to.be.an('array');
+		expect(segment.segmentsFields['UB2']).to.be.an('array');
+		expect(segment.segmentsFields['BLG']).to.be.an('array');
+		expect(segment.segmentsFields['ABS']).to.be.an('array');
+	});
+
+	it('should support care management segments (GOL, PRB, PTH, VAR)', function() {
+		const hl7parser = new Hl7Parser();
+		const segment = new hl7parser.HL7Segment('GOL', 0, ['test']);
+		
+		expect(segment.segmentsFields['GOL']).to.be.an('array');
+		expect(segment.segmentsFields['PRB']).to.be.an('array');
+		expect(segment.segmentsFields['PTH']).to.be.an('array');
+		expect(segment.segmentsFields['VAR']).to.be.an('array');
+	});
+
+	it('should support dietary segments (ODS, ODT)', function() {
+		const hl7parser = new Hl7Parser();
+		const segment = new hl7parser.HL7Segment('ODS', 0, ['test']);
+		
+		expect(segment.segmentsFields['ODS']).to.be.an('array');
+		expect(segment.segmentsFields['ODT']).to.be.an('array');
+	});
+
+	it('should support product experience segments (PEO, PCR, PSH, PDC)', function() {
+		const hl7parser = new Hl7Parser();
+		const segment = new hl7parser.HL7Segment('PEO', 0, ['test']);
+		
+		expect(segment.segmentsFields['PEO']).to.be.an('array');
+		expect(segment.segmentsFields['PCR']).to.be.an('array');
+		expect(segment.segmentsFields['PSH']).to.be.an('array');
+		expect(segment.segmentsFields['PDC']).to.be.an('array');
+	});
+
+	it('should support facility/trial/notification segments (CTI, FAC, NDS, CER)', function() {
+		const hl7parser = new Hl7Parser();
+		const segment = new hl7parser.HL7Segment('CTI', 0, ['test']);
+		
+		expect(segment.segmentsFields['CTI']).to.be.an('array');
+		expect(segment.segmentsFields['FAC']).to.be.an('array');
+		expect(segment.segmentsFields['NDS']).to.be.an('array');
+		expect(segment.segmentsFields['CER']).to.be.an('array');
+	});
 });
