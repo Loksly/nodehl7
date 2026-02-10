@@ -1,0 +1,4 @@
+{
+	"name": "RXR",
+	"fields": ["Route", "Administration Site", "Administration Device", "Administration Method", "Routing Instruction", "Administration Site Modifier"]
+}
