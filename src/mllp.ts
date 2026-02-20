@@ -86,13 +86,13 @@ class MLLPServer extends net.Server {
 		this._messageHandler = handler || null;
 
 		this.on('connection', (socket: net.Socket) => {
-			let buffer = Buffer.alloc(0);
+			let buffer: Buffer = Buffer.alloc(0);
 
 			socket.on('data', (data: Buffer) => {
 				buffer = Buffer.concat([buffer, data]);
 
 				const result = unwrap(buffer);
-				buffer = Buffer.from(result.remainder);
+				buffer = result.remainder as Buffer;
 
 				for (const msg of result.messages) {
 					const reply = (response: string | Buffer): void => {

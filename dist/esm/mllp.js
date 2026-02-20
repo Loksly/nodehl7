@@ -75,7 +75,7 @@ class MLLPServer extends net.Server {
             socket.on('data', (data) => {
                 buffer = Buffer.concat([buffer, data]);
                 const result = unwrap(buffer);
-                buffer = Buffer.from(result.remainder);
+                buffer = result.remainder;
                 for (const msg of result.messages) {
                     const reply = (response) => {
                         socket.write(wrap(response));
