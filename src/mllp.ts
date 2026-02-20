@@ -1,4 +1,5 @@
 import * as net from 'net';
+import * as tls from 'tls';
 import { EventEmitter } from 'events';
 
 const VT = Buffer.from([0x0b]);
@@ -62,8 +63,16 @@ function unwrap(buffer: Buffer): { messages: Buffer[]; remainder: Buffer } {
 
 type MessageHandler = (message: Buffer, reply: (response: string | Buffer) => void) => void;
 
+interface MLLPServerOptions {
+	tls?: tls.TlsOptions;
+}
+
+interface MLLPClientOptions {
+	tls?: tls.ConnectionOptions;
+}
+
 /**
- * MLLP Server - a TCP server that handles MLLP-framed HL7 messages.
+ * MLLP Server - a TCP/TLS server that handles MLLP-framed HL7 messages.
  *
  * Emits:
  *  - 'hl7_message' with (message: Buffer, reply: Function, socket: net.Socket)
@@ -77,15 +86,31 @@ type MessageHandler = (message: Buffer, reply: (response: string | Buffer) => vo
  *   const server = new MLLPServer();
  *   server.on('hl7_message', (message, reply) => { ... });
  *   server.listen(port);
+ *
+ *   // With TLS:
+ *   const server = new MLLPServer(handler, { tls: { key, cert } });
+ *   server.listen(port);
  */
-class MLLPServer extends net.Server {
+class MLLPServer extends EventEmitter {
 	private _messageHandler: MessageHandler | null;
+	private _server: net.Server;
 
-	constructor(handler?: MessageHandler) {
+	constructor(handler?: MessageHandler | MLLPServerOptions, options?: MLLPServerOptions) {
 		super();
-		this._messageHandler = handler || null;
 
-		this.on('connection', (socket: net.Socket) => {
+		let resolvedHandler: MessageHandler | null = null;
+		let resolvedOptions: MLLPServerOptions | undefined;
+
+		if (typeof handler === 'function') {
+			resolvedHandler = handler;
+			resolvedOptions = options;
+		} else if (typeof handler === 'object' && handler !== null) {
+			resolvedOptions = handler;
+		}
+
+		this._messageHandler = resolvedHandler;
+
+		const connectionHandler = (socket: net.Socket): void => {
 			let buffer: Buffer = Buffer.alloc(0);
 
 			socket.on('data', (data: Buffer) => {
@@ -110,7 +135,35 @@ class MLLPServer extends net.Server {
 			socket.on('error', (err: Error) => {
 				this.emit('error', err);
 			});
+		};
+
+		if (resolvedOptions && resolvedOptions.tls) {
+			this._server = tls.createServer(resolvedOptions.tls, connectionHandler);
+		} else {
+			this._server = net.createServer(connectionHandler);
+		}
+
+		this._server.on('error', (err: Error) => {
+			this.emit('error', err);
 		});
+	}
+
+	listen(port?: number, hostname?: string, backlog?: number, listeningListener?: () => void): this;
+	listen(port?: number, hostname?: string, listeningListener?: () => void): this;
+	listen(port?: number, listeningListener?: () => void): this;
+	listen(options: net.ListenOptions, listeningListener?: () => void): this;
+	listen(...args: any[]): this {
+		this._server.listen(...args);
+		return this;
+	}
+
+	close(callback?: (err?: Error) => void): this {
+		this._server.close(callback);
+		return this;
+	}
+
+	address(): net.AddressInfo | string | null {
+		return this._server.address();
 	}
 }
 
@@ -122,19 +175,26 @@ class MLLPServer extends net.Server {
  *   const client = new MLLPClient('127.0.0.1', 2575);
  *   const response = await client.send(hl7Message);
  *   client.close();
+ *
+ *   // With TLS:
+ *   const client = new MLLPClient('127.0.0.1', 2575, { tls: { rejectUnauthorized: false } });
+ *   const response = await client.send(hl7Message);
+ *   client.close();
  */
 class MLLPClient extends EventEmitter {
 	private _host: string;
 	private _port: number;
 	private _socket: net.Socket | null;
 	private _connected: boolean;
+	private _tlsOptions: tls.ConnectionOptions | undefined;
 
-	constructor(host: string, port: number) {
+	constructor(host: string, port: number, options?: MLLPClientOptions) {
 		super();
 		this._host = host;
 		this._port = port;
 		this._socket = null;
 		this._connected = false;
+		this._tlsOptions = options && options.tls ? options.tls : undefined;
 	}
 
 	private _connect(): Promise<net.Socket> {
@@ -144,10 +204,20 @@ class MLLPClient extends EventEmitter {
 				return;
 			}
 
-			const socket = net.createConnection({ host: this._host, port: this._port }, () => {
-				this._connected = true;
-				resolve(socket);
-			});
+			let socket: net.Socket;
+
+			if (this._tlsOptions) {
+				const tlsOpts = Object.assign({}, this._tlsOptions, { host: this._host, port: this._port });
+				socket = tls.connect(tlsOpts, () => {
+					this._connected = true;
+					resolve(socket);
+				});
+			} else {
+				socket = net.createConnection({ host: this._host, port: this._port }, () => {
+					this._connected = true;
+					resolve(socket);
+				});
+			}
 
 			socket.on('error', (err: Error) => {
 				this._connected = false;

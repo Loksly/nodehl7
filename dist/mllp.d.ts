@@ -1,4 +1,5 @@
 import * as net from 'net';
+import * as tls from 'tls';
 import { EventEmitter } from 'events';
 declare const VT: Buffer<ArrayBuffer>;
 declare const FS_CR: Buffer<ArrayBuffer>;
@@ -19,8 +20,14 @@ declare function unwrap(buffer: Buffer): {
     remainder: Buffer;
 };
 type MessageHandler = (message: Buffer, reply: (response: string | Buffer) => void) => void;
+interface MLLPServerOptions {
+    tls?: tls.TlsOptions;
+}
+interface MLLPClientOptions {
+    tls?: tls.ConnectionOptions;
+}
 /**
- * MLLP Server - a TCP server that handles MLLP-framed HL7 messages.
+ * MLLP Server - a TCP/TLS server that handles MLLP-framed HL7 messages.
  *
  * Emits:
  *  - 'hl7_message' with (message: Buffer, reply: Function, socket: net.Socket)
@@ -34,10 +41,21 @@ type MessageHandler = (message: Buffer, reply: (response: string | Buffer) => vo
  *   const server = new MLLPServer();
  *   server.on('hl7_message', (message, reply) => { ... });
  *   server.listen(port);
+ *
+ *   // With TLS:
+ *   const server = new MLLPServer(handler, { tls: { key, cert } });
+ *   server.listen(port);
  */
-declare class MLLPServer extends net.Server {
+declare class MLLPServer extends EventEmitter {
     private _messageHandler;
-    constructor(handler?: MessageHandler);
+    private _server;
+    constructor(handler?: MessageHandler | MLLPServerOptions, options?: MLLPServerOptions);
+    listen(port?: number, hostname?: string, backlog?: number, listeningListener?: () => void): this;
+    listen(port?: number, hostname?: string, listeningListener?: () => void): this;
+    listen(port?: number, listeningListener?: () => void): this;
+    listen(options: net.ListenOptions, listeningListener?: () => void): this;
+    close(callback?: (err?: Error) => void): this;
+    address(): net.AddressInfo | string | null;
 }
 /**
  * MLLP Client - connects to an MLLP server, sends HL7 messages,
@@ -47,13 +65,19 @@ declare class MLLPServer extends net.Server {
  *   const client = new MLLPClient('127.0.0.1', 2575);
  *   const response = await client.send(hl7Message);
  *   client.close();
+ *
+ *   // With TLS:
+ *   const client = new MLLPClient('127.0.0.1', 2575, { tls: { rejectUnauthorized: false } });
+ *   const response = await client.send(hl7Message);
+ *   client.close();
  */
 declare class MLLPClient extends EventEmitter {
     private _host;
     private _port;
     private _socket;
     private _connected;
-    constructor(host: string, port: number);
+    private _tlsOptions;
+    constructor(host: string, port: number, options?: MLLPClientOptions);
     private _connect;
     /**
      * Send an HL7 message and wait for the server's response.

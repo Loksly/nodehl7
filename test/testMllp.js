@@ -6,6 +6,7 @@
 	var path = require('path'),
 		expect = require('chai').expect,
 		net = require('net'),
+		crypto = require('crypto'),
 		nodehl7 = require(path.join(__dirname, '..', 'dist', 'hl7'));
 
 	var MLLPServer = nodehl7.MLLPServer;
@@ -231,6 +232,121 @@
 							server.close(done);
 						}
 					});
+				});
+			});
+		});
+
+		describe('MLLP TLS Server and Client Tests', function () {
+			var tlsCerts;
+
+			before(function () {
+				// Generate self-signed certificate for testing
+				var keys = crypto.generateKeyPairSync('rsa', {
+					modulusLength: 2048,
+					publicKeyEncoding: { type: 'spki', format: 'pem' },
+					privateKeyEncoding: { type: 'pkcs8', format: 'pem' }
+				});
+
+				var execSync = require('child_process').execSync;
+				var fs = require('fs');
+				var tmpDir = require('os').tmpdir();
+				var keyPath = path.join(tmpDir, 'mllp-test-key.pem');
+				var certPath = path.join(tmpDir, 'mllp-test-cert.pem');
+				fs.writeFileSync(keyPath, keys.privateKey);
+				execSync('openssl req -new -x509 -key ' + keyPath + ' -out ' + certPath + ' -days 1 -subj "/CN=localhost" 2>/dev/null');
+				tlsCerts = {
+					key: keys.privateKey,
+					cert: fs.readFileSync(certPath, 'utf8')
+				};
+			});
+
+			it('should send and receive an HL7 message over TLS', function (done) {
+				this.timeout(5000);
+				var server = new MLLPServer(function (message, reply) {
+					expect(message.toString()).to.equal(HL7_SAMPLE);
+					reply(HL7_ACK);
+				}, { tls: { key: tlsCerts.key, cert: tlsCerts.cert } });
+
+				server.listen(0, '127.0.0.1', function () {
+					var port = server.address().port;
+					var client = new MLLPClient('127.0.0.1', port, {
+						tls: { rejectUnauthorized: false }
+					});
+
+					client.send(HL7_SAMPLE).then(function (response) {
+						expect(response.toString()).to.contain('ACK');
+						expect(response.toString()).to.contain('MSA|AA|123');
+						client.close();
+						server.close(done);
+					}).catch(function (err) {
+						client.close();
+						server.close(function () { done(err); });
+					});
+				});
+			});
+
+			it('should support TLS server with event-based handler', function (done) {
+				this.timeout(5000);
+				var server = new MLLPServer({ tls: { key: tlsCerts.key, cert: tlsCerts.cert } });
+
+				server.on('hl7_message', function (message, reply) {
+					expect(message.toString()).to.equal(HL7_SAMPLE);
+					reply(HL7_ACK);
+				});
+
+				server.listen(0, '127.0.0.1', function () {
+					var port = server.address().port;
+					var client = new MLLPClient('127.0.0.1', port, {
+						tls: { rejectUnauthorized: false }
+					});
+
+					client.send(HL7_SAMPLE).then(function (response) {
+						expect(response.toString()).to.contain('ACK');
+						client.close();
+						server.close(done);
+					}).catch(function (err) {
+						client.close();
+						server.close(function () { done(err); });
+					});
+				});
+			});
+
+			it('should handle multiple concurrent TLS connections', function (done) {
+				this.timeout(5000);
+				var receivedMessages = 0;
+				var totalMessages = 3;
+
+				var server = new MLLPServer(function (message, reply) {
+					receivedMessages++;
+					reply(HL7_ACK);
+				}, { tls: { key: tlsCerts.key, cert: tlsCerts.cert } });
+
+				server.listen(0, '127.0.0.1', function () {
+					var port = server.address().port;
+					var completed = 0;
+
+					function onComplete() {
+						completed++;
+						if (completed === totalMessages) {
+							expect(receivedMessages).to.equal(totalMessages);
+							server.close(done);
+						}
+					}
+
+					for (var i = 0; i < totalMessages; i++) {
+						(function () {
+							var client = new MLLPClient('127.0.0.1', port, {
+								tls: { rejectUnauthorized: false }
+							});
+							client.send(HL7_SAMPLE).then(function (response) {
+								expect(response.toString()).to.contain('ACK');
+								client.close();
+								onComplete();
+							}).catch(function (err) {
+								done(err);
+							});
+						})();
+					}
 				});
 			});
 		});
