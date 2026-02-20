@@ -1,6 +1,6 @@
 {
   "name": "nodehl7",
-  "version": "0.3.0",
+  "version": "1.1.0",
   "description": "NodeJS Library for parsing HL7 Messages",
   "main": "dist/hl7.js",
   "module": "dist/esm/hl7.js",
