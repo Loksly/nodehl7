@@ -16,6 +16,8 @@ Note there is another package named [node-hl7](https://github.com/ekryski/node-h
 - ✅ **Dual Module Format**: Both CommonJS and ES Modules supported
 - ✅ **Event Emitter**: Subscribe to parse events
 - ✅ **HL7 v2.x**: Support for HL7 version 2.x text-based messages
+- ✅ **MLLP Network Transport**: Built-in MLLP server and client for real-time HL7 message exchange over TCP/IP
+- ✅ **TLS/SSL Support**: Optional encrypted connections for secure HL7 communication
 
 ## Installation
 
@@ -107,6 +109,119 @@ async function parseFile(filepath: string) {
   const message = await hl7parser.parseFile(filepath);
   const versionId = message.get('MSH', 'Version ID');
   console.log(versionId);
+}
+```
+
+### MLLP Network Transport
+
+The library includes built-in support for [MLLP (Minimal Lower Layer Protocol)](https://www.hl7.org/implement/standards/product_brief.cfm?product_id=55), the standard transport protocol for HL7 v2.x messages over TCP/IP. MLLP wraps each HL7 message with framing bytes:
+
+- **Start Block**: `0x0B` (VT - Vertical Tab)
+- **Payload**: The HL7 message
+- **End Block**: `0x1C` (FS - File Separator) followed by `0x0D` (CR - Carriage Return)
+
+#### MLLP Server
+
+```javascript
+const { MLLPServer } = require('nodehl7');
+
+const server = new MLLPServer((message, reply) => {
+  console.log('Received:', message.toString());
+  // Send an ACK response
+  reply('MSH|^~\\&|REC_APP||SEND_APP||202305101000||ACK|456|P|2.3\rMSA|AA|123');
+});
+
+server.listen(2575, '0.0.0.0', () => {
+  console.log('MLLP server listening on port 2575');
+});
+```
+
+You can also use the event-based API:
+
+```javascript
+const server = new MLLPServer();
+
+server.on('hl7_message', (message, reply) => {
+  console.log('Received:', message.toString());
+  reply('MSH|^~\\&|...||...||...||ACK|...\rMSA|AA|...');
+});
+
+server.listen(2575);
+```
+
+#### MLLP Client
+
+```javascript
+const { MLLPClient } = require('nodehl7');
+
+const client = new MLLPClient('127.0.0.1', 2575);
+
+const hl7Message = 'MSH|^~\\&|SENDING_APP|SENDING_FAC|REC_APP|REC_FAC|202305101000||ADT^A01|123|P|2.3';
+
+client.send(hl7Message).then(response => {
+  console.log('ACK:', response.toString());
+  client.close();
+}).catch(err => {
+  console.error('Error:', err);
+  client.close();
+});
+```
+
+#### MLLP with TLS/SSL
+
+For secure encrypted connections, both server and client support optional TLS configuration:
+
+```javascript
+const fs = require('fs');
+const { MLLPServer, MLLPClient } = require('nodehl7');
+
+// TLS Server
+const server = new MLLPServer((message, reply) => {
+  reply('MSH|^~\\&|...||...||...||ACK|...\rMSA|AA|...');
+}, {
+  tls: {
+    key: fs.readFileSync('server-key.pem'),
+    cert: fs.readFileSync('server-cert.pem')
+  }
+});
+
+server.listen(2576, () => {
+  console.log('Secure MLLP server listening on port 2576');
+});
+
+// TLS Client
+const client = new MLLPClient('127.0.0.1', 2576, {
+  tls: {
+    rejectUnauthorized: true,
+    ca: fs.readFileSync('ca-cert.pem')
+  }
+});
+
+const response = await client.send(hl7Message);
+console.log('ACK:', response.toString());
+client.close();
+```
+
+#### TypeScript MLLP Usage
+
+```typescript
+import { MLLPServer, MLLPClient } from 'nodehl7';
+
+const server = new MLLPServer((message, reply) => {
+  const hl7String = message.toString();
+  console.log('Received:', hl7String);
+  reply('MSH|^~\\&|...||...||...||ACK|...\rMSA|AA|...');
+});
+
+server.listen(2575, '0.0.0.0', () => {
+  console.log('Server ready');
+});
+
+async function sendMessage() {
+  const client = new MLLPClient('127.0.0.1', 2575);
+  const response = await client.send('MSH|^~\\&|...');
+  console.log(response.toString());
+  client.close();
 }
 ```
 
@@ -243,6 +358,78 @@ pidSegment.set('Patient name', 'John Doe');
 
 // Convert to object
 const pidObject = pidSegment.toMappedObject();
+```
+
+### MLLPServer
+
+An MLLP server that handles incoming HL7 messages over TCP or TLS connections.
+
+#### Constructor
+
+```javascript
+new MLLPServer(handler?, options?)
+```
+
+**Parameters:**
+- `handler` (function, optional): A callback `(message: Buffer, reply: Function) => void` invoked for each received message
+- `options` (object, optional): Configuration options
+  - `tls` (object, optional): TLS options passed to `tls.createServer()` (e.g., `{ key, cert, ca }`)
+
+**Events:**
+- `'hl7_message'` — Emitted with `(message: Buffer, reply: Function, socket: net.Socket)` when a complete MLLP-framed message is received
+
+**Methods:**
+- **`listen(port, hostname?, callback?)`**: Start listening for connections.
+- **`close(callback?)`**: Stop accepting new connections and close the server.
+- **`address()`**: Returns the bound address of the server.
+
+### MLLPClient
+
+A client for sending HL7 messages to an MLLP server and receiving responses.
+
+#### Constructor
+
+```javascript
+new MLLPClient(host, port, options?)
+```
+
+**Parameters:**
+- `host` (string): The server hostname or IP address
+- `port` (number): The server port
+- `options` (object, optional): Configuration options
+  - `tls` (object, optional): TLS options passed to `tls.connect()` (e.g., `{ rejectUnauthorized, ca }`)
+
+**Methods:**
+
+##### `send(data)`
+
+Sends an HL7 message and waits for the server's response.
+
+**Returns:** `Promise<Buffer>`
+
+**Parameters:**
+- `data` (string | Buffer): The HL7 message to send
+
+```javascript
+const response = await client.send(hl7Message);
+```
+
+##### `close()`
+
+Closes the client connection.
+
+### MLLP Framing Utilities
+
+Low-level utilities for MLLP message framing:
+
+```javascript
+const { mllpWrap, mllpUnwrap } = require('nodehl7');
+
+// Wrap a message with MLLP framing bytes
+const framed = mllpWrap('MSH|^~\\&|...');
+
+// Extract messages from a buffer containing MLLP-framed data
+const { messages, remainder } = mllpUnwrap(framed);
 ```
 
 ## Supported Segments
