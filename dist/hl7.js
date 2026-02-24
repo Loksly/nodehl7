@@ -40,6 +40,125 @@ const encoding = __importStar(require("encoding"));
 const fs = __importStar(require("fs"));
 const segments_1 = require("./segments");
 let validSegmentsName = [];
+function decodeXMLEntities(text) {
+    return text
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&apos;/g, "'")
+        .replace(/&amp;/g, '&');
+}
+function parseXMLDocument(xmlStr) {
+    xmlStr = xmlStr.replace(/<\?[\s\S]*?\?>/g, '');
+    let commentStart = xmlStr.indexOf('<!--');
+    while (commentStart >= 0) {
+        const commentEnd = xmlStr.indexOf('-->', commentStart);
+        if (commentEnd < 0) {
+            xmlStr = xmlStr.slice(0, commentStart);
+            break;
+        }
+        xmlStr = xmlStr.slice(0, commentStart) + xmlStr.slice(commentEnd + 3);
+        commentStart = xmlStr.indexOf('<!--');
+    }
+    xmlStr = xmlStr.trim();
+    const stack = [];
+    let root = null;
+    let pos = 0;
+    while (pos < xmlStr.length) {
+        const ltPos = xmlStr.indexOf('<', pos);
+        if (ltPos < 0)
+            break;
+        if (ltPos > pos) {
+            const text = decodeXMLEntities(xmlStr.slice(pos, ltPos));
+            if (text.trim() && stack.length > 0) {
+                stack[stack.length - 1].text += text;
+            }
+        }
+        const gtPos = xmlStr.indexOf('>', ltPos);
+        if (gtPos < 0)
+            break;
+        const tagStr = xmlStr.slice(ltPos + 1, gtPos);
+        if (tagStr.startsWith('/')) {
+            const closed = stack.pop();
+            if (closed) {
+                if (stack.length > 0) {
+                    stack[stack.length - 1].children.push(closed);
+                }
+                else {
+                    root = closed;
+                }
+            }
+        }
+        else {
+            const isSelfClosing = tagStr.endsWith('/');
+            const rawName = isSelfClosing ? tagStr.slice(0, -1).trimEnd() : tagStr;
+            const spaceIdx = rawName.search(/\s/);
+            const name = spaceIdx >= 0 ? rawName.slice(0, spaceIdx) : rawName.trim();
+            const node = { name, children: [], text: '' };
+            if (isSelfClosing) {
+                if (stack.length > 0) {
+                    stack[stack.length - 1].children.push(node);
+                }
+                else {
+                    root = node;
+                }
+            }
+            else {
+                stack.push(node);
+            }
+        }
+        pos = gtPos + 1;
+    }
+    return root;
+}
+function xmlFieldValue(fieldNode) {
+    if (fieldNode.children.length === 0) {
+        return fieldNode.text;
+    }
+    let maxIdx = 0;
+    for (const child of fieldNode.children) {
+        const dot = child.name.lastIndexOf('.');
+        if (dot >= 0) {
+            const n = parseInt(child.name.slice(dot + 1), 10);
+            if (!isNaN(n) && n > maxIdx)
+                maxIdx = n;
+        }
+    }
+    if (maxIdx === 0) {
+        return fieldNode.children.map(c => c.text).join('');
+    }
+    const components = new Array(maxIdx).fill('');
+    for (const child of fieldNode.children) {
+        const dot = child.name.lastIndexOf('.');
+        if (dot >= 0) {
+            const n = parseInt(child.name.slice(dot + 1), 10);
+            if (!isNaN(n) && n >= 1 && n <= maxIdx) {
+                components[n - 1] = child.text || '';
+            }
+        }
+    }
+    return components.length === 1 ? components[0] : components;
+}
+function extractHL7SegmentNodes(node, validSegs) {
+    const result = [];
+    for (const child of node.children) {
+        if (validSegs.indexOf(child.name.toUpperCase()) >= 0) {
+            result.push(child);
+        }
+        else {
+            result.push(...extractHL7SegmentNodes(child, validSegs));
+        }
+    }
+    return result;
+}
+// --- FHIR helpers ---
+function hl7DateToFHIR(d) {
+    const s = Array.isArray(d) ? d[0] : d;
+    if (!s || s.length < 8)
+        return undefined;
+    return `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`;
+}
+// ---
 const shallowClone = function (obj) {
     const copy = {};
     for (const name in obj) {
@@ -102,6 +221,90 @@ class Hl7Message {
             return returningValue;
         }
         return null;
+    }
+    toFHIR() {
+        const toStr = (v) => {
+            if (v === null)
+                return undefined;
+            return Array.isArray(v) ? v[0] : v;
+        };
+        const bundle = {
+            resourceType: 'Bundle',
+            type: 'message',
+            entry: []
+        };
+        const entries = bundle.entry;
+        const mshSeg = this.get('MSH');
+        if (mshSeg) {
+            const msgControlId = mshSeg.get('Message control ID');
+            const msgType = mshSeg.get('Message type');
+            const sendingApp = mshSeg.get('Sending application');
+            const sendingFacility = mshSeg.get('Sending facility');
+            const receivingApp = mshSeg.get('Receiving application');
+            const msgHeader = {
+                resourceType: 'MessageHeader',
+                id: toStr(msgControlId),
+                eventCoding: {
+                    system: 'http://terminology.hl7.org/CodeSystem/v2-0003',
+                    code: Array.isArray(msgType) ? `${msgType[0]}^${msgType[1]}` : (msgType || undefined)
+                },
+                source: {
+                    name: toStr(sendingApp),
+                    software: toStr(sendingFacility)
+                }
+            };
+            if (receivingApp) {
+                msgHeader.destination = [{ name: toStr(receivingApp) }];
+            }
+            entries.push({ resource: msgHeader });
+        }
+        const pidSeg = this.get('PID');
+        if (pidSeg) {
+            const patientId = pidSeg.get('Patient identifier list');
+            const patientName = pidSeg.get('Patient name');
+            const dob = pidSeg.get('Date of birth');
+            const gender = pidSeg.get('Gender');
+            const address = pidSeg.get('Patient Address');
+            const homePhone = pidSeg.get('Phone number (home)');
+            const genderMap = { M: 'male', F: 'female', O: 'other', U: 'unknown' };
+            const patient = {
+                resourceType: 'Patient'
+            };
+            if (patientId) {
+                patient.identifier = [{ value: toStr(patientId) }];
+            }
+            if (patientName) {
+                const nameArr = Array.isArray(patientName) ? patientName : [patientName];
+                patient.name = [{
+                        family: nameArr[0] || undefined,
+                        given: nameArr[1] ? [nameArr[1]] : undefined
+                    }];
+            }
+            const birthDate = hl7DateToFHIR(dob);
+            if (birthDate)
+                patient.birthDate = birthDate;
+            const genderStr = toStr(gender);
+            if (genderStr)
+                patient.gender = genderMap[genderStr] || 'unknown';
+            if (address) {
+                const addrArr = Array.isArray(address) ? address : [address];
+                patient.address = [{
+                        line: addrArr[0] ? [addrArr[0]] : undefined,
+                        city: addrArr[2] || undefined,
+                        state: addrArr[3] || undefined,
+                        postalCode: addrArr[4] || undefined
+                    }];
+            }
+            if (homePhone) {
+                patient.telecom = [{
+                        system: 'phone',
+                        value: toStr(homePhone),
+                        use: 'home'
+                    }];
+            }
+            entries.push({ resource: patient });
+        }
+        return bundle;
     }
 }
 class HL7Segment {
@@ -336,6 +539,89 @@ class hl7Parser extends events_1.EventEmitter {
                 const r = new Hl7Message(result, delimiters, ID);
                 process.nextTick(fn(done, r));
             }
+        });
+    }
+    parseXML(xmlContent, ID, wrappedDone) {
+        const self = this;
+        return new Promise((resolve, reject) => {
+            const done = function (err, hl7msg) {
+                if (err) {
+                    if (self.listeners('error').length > 0) {
+                        self.emit('error', err);
+                    }
+                    if (wrappedDone)
+                        wrappedDone(err, hl7msg);
+                    reject(err);
+                }
+                else {
+                    if (self.listeners('message').length > 0) {
+                        self.emit('message', hl7msg);
+                    }
+                    if (hl7msg) {
+                        const tipoMsg = hl7msg.get('EVN', 'Event Type Code');
+                        if (tipoMsg !== null && typeof tipoMsg === 'string' && self.listeners(tipoMsg).length > 0) {
+                            self.emit(tipoMsg, hl7msg);
+                        }
+                    }
+                    if (wrappedDone)
+                        wrappedDone(null, hl7msg);
+                    resolve(hl7msg);
+                }
+            };
+            const xmlDoc = parseXMLDocument(xmlContent);
+            if (!xmlDoc) {
+                done({ errortype: self.INVALID });
+                return;
+            }
+            const delimiters = {
+                composite: '|',
+                subComposite: '^',
+                repetitions: '~',
+                escapeChar: '\\',
+                subComponent: '&'
+            };
+            const segmentNodes = extractHL7SegmentNodes(xmlDoc, validSegmentsName);
+            if (segmentNodes.length === 0) {
+                done({ errortype: self.EMPTY });
+                return;
+            }
+            const result = [];
+            for (let order = 0; order < segmentNodes.length; order++) {
+                const segNode = segmentNodes[order];
+                const segName = segNode.name.toUpperCase();
+                const isMSH = segName === 'MSH';
+                const parts = [];
+                for (const fieldNode of segNode.children) {
+                    const dot = fieldNode.name.lastIndexOf('.');
+                    if (dot < 0)
+                        continue;
+                    const fieldNum = parseInt(fieldNode.name.slice(dot + 1), 10);
+                    if (isNaN(fieldNum))
+                        continue;
+                    if (isMSH && fieldNum === 1) {
+                        const sep = fieldNode.text.trim();
+                        if (sep)
+                            delimiters.composite = sep;
+                        continue;
+                    }
+                    const arrayIdx = isMSH ? fieldNum - 2 : fieldNum - 1;
+                    if (arrayIdx < 0)
+                        continue;
+                    while (parts.length <= arrayIdx) {
+                        parts.push('');
+                    }
+                    parts[arrayIdx] = xmlFieldValue(fieldNode);
+                }
+                if (isMSH && parts.length > 0 && typeof parts[0] === 'string' && parts[0].length >= 4) {
+                    delimiters.subComposite = parts[0][0];
+                    delimiters.repetitions = parts[0][1];
+                    delimiters.escapeChar = parts[0][2];
+                    delimiters.subComponent = parts[0][3];
+                }
+                result.push(new HL7Segment(segName, order, parts));
+            }
+            const hl7msg = new Hl7Message(result, delimiters, ID);
+            process.nextTick(() => done(null, hl7msg));
         });
     }
     parseFile(filepath, wrappedDone) {

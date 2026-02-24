@@ -8,7 +8,7 @@ NodeJS Library for parsing HL7 Messages
 
 **Homepage:** [https://loksly.github.io/nodehl7/](https://loksly.github.io/nodehl7/)
 
-This library provides an easy way to parse HL7 Messages v.2.x, text-based, no XML format.
+This library provides an easy way to parse HL7 Messages v.2.x, both text-based (ER7) and XML formats.
 Note there is another package named [node-hl7](https://github.com/ekryski/node-hl7) that provides a different API. 
 
 ## Features
@@ -19,7 +19,9 @@ Note there is another package named [node-hl7](https://github.com/ekryski/node-h
 - ✅ **Promise-based API**: Modern async/await support with backward-compatible callbacks
 - ✅ **Dual Module Format**: Both CommonJS and ES Modules supported
 - ✅ **Event Emitter**: Subscribe to parse events
-- ✅ **HL7 v2.x**: Support for HL7 version 2.x text-based messages
+- ✅ **HL7 v2.x ER7**: Support for HL7 version 2.x text-based (pipe-delimited) messages
+- ✅ **HL7 v2.x XML**: Support for HL7 version 2.x XML-encoded messages (`parseXML`)
+- ✅ **FHIR Transformation**: Convert parsed HL7 messages to FHIR R4 Bundle JSON (`toFHIR`)
 - ✅ **MLLP Network Transport**: Built-in MLLP server and client for real-time HL7 message exchange over TCP/IP
 - ✅ **TLS/SSL Support**: Optional encrypted connections for secure HL7 communication
 
@@ -293,6 +295,39 @@ hl7parser.parse(messageContent, 'msg-001', (err, message) => {
 });
 ```
 
+##### `parseXML(xmlContent, ID, callback?)`
+
+Parses an HL7 v2 XML-encoded message string (namespace `urn:hl7-org:v2xml`).
+
+**Returns:** `Promise<Hl7Message>`
+
+**Parameters:**
+- `xmlContent` (string): The HL7 v2 XML message content
+- `ID` (string): An identifier for the message
+- `callback` (function, optional): Callback function `(err, Hl7Message) => void`
+
+The returned `Hl7Message` is fully compatible with all existing methods (`get`, `getSegments`, `toMappedObject`, `toFHIR`, etc.).
+
+```javascript
+// From a file
+const xml = require('fs').readFileSync('./message.xml', 'utf8');
+const message = await hl7parser.parseXML(xml, 'msg-001');
+console.log(message.get('MSH', 'Version ID')); // '2.5'
+
+// From a string
+const xmlContent = `<?xml version="1.0"?>
+<ADT_A01 xmlns="urn:hl7-org:v2xml">
+  <MSH>
+    <MSH.1>|</MSH.1>
+    <MSH.2>^~\\&amp;</MSH.2>
+    <MSH.3><HD.1>SENDER</HD.1></MSH.3>
+    <MSH.10>MSG001</MSH.10>
+    <MSH.12><VID.1>2.5</VID.1></MSH.12>
+  </MSH>
+</ADT_A01>`;
+const message = await hl7parser.parseXML(xmlContent, 'msg-001');
+```
+
 ##### `parseFile(filepath, callback?)`
 
 Parses an HL7 message from a file.
@@ -323,6 +358,7 @@ hl7parser.parseFile('./file.hl7', (err, message) => {
 - **`get(segmentname, fieldname, joinChar)`**: Returns the field value. If it's an array, joins it using `joinChar` as separator.
 - **`getSegmentAt(index)`**: Returns the segment at the specified position.
 - **`getSegments(segmentname)`**: Returns all segments with the specified name.
+- **`toFHIR()`**: Converts the message to a FHIR R4 Bundle (JSON object). Maps MSH → `MessageHeader` and PID → `Patient` resources.
 
 ```javascript
 const message = await hl7parser.parseFile('./file.hl7');
@@ -341,7 +377,31 @@ const firstSegment = message.getSegmentAt(0);
 
 // Get number of segments
 const segmentCount = message.size();
+
+// Convert to FHIR Bundle
+const fhirBundle = message.toFHIR();
+console.log(fhirBundle.resourceType); // 'Bundle'
+console.log(fhirBundle.entry[0].resource.resourceType); // 'MessageHeader'
+console.log(fhirBundle.entry[1].resource.resourceType); // 'Patient'
 ```
+
+#### FHIR Field Mapping
+
+`toFHIR()` produces a FHIR R4 Bundle of type `message` with the following mappings:
+
+| HL7 v2 Field | FHIR Field |
+|---|---|
+| MSH-10 Message Control ID | `MessageHeader.id` |
+| MSH-3 Sending Application | `MessageHeader.source.name` |
+| MSH-4 Sending Facility | `MessageHeader.source.software` |
+| MSH-5 Receiving Application | `MessageHeader.destination[0].name` |
+| MSH-9 Message Type | `MessageHeader.eventCoding.code` |
+| PID-3 Patient Identifier List | `Patient.identifier[0].value` |
+| PID-5 Patient Name | `Patient.name[0].family` / `.given` |
+| PID-7 Date of Birth | `Patient.birthDate` (YYYY-MM-DD) |
+| PID-8 Gender (M/F/O/U) | `Patient.gender` (male/female/other/unknown) |
+| PID-11 Patient Address | `Patient.address[0]` |
+| PID-13 Phone Number (Home) | `Patient.telecom[0]` |
 
 ### Hl7Segment
 
