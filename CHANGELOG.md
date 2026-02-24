@@ -1,6 +1,16 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [2.1.0] - 2026-02-24
+
+### Added
+- **XML Parser**: New `parseXML(xmlContent, ID, [callback])` method on `hl7Parser` that parses HL7 v2 XML-encoded messages (namespace `urn:hl7-org:v2xml`) and returns a standard `Hl7Message` object, fully compatible with all existing methods (`get`, `getSegments`, `toMappedObject`, etc.).
+- **FHIR Transformation**: New `toFHIR()` method on `Hl7Message` that converts a parsed HL7 v2 message into a FHIR R4 Bundle (JSON), mapping:
+  - MSH segment → `MessageHeader` resource (id, eventCoding, source, destination)
+  - PID segment → `Patient` resource (identifier, name, birthDate, gender, address, telecom)
+- **33 new unit tests** covering XML parsing, FHIR output, error handling, callback API, and `toMappedObject` compatibility.
+- `toFHIR()` works on both XML-parsed and ER7-parsed messages.
+
 ## [2.0.0] - 2026-02-24
 
 ### Changed

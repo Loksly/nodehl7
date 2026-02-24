@@ -33,6 +33,7 @@ declare class Hl7Message {
     getSegments(segmentName: string): HL7Segment[];
     getSegments(segmentName: string, nmbr: number): HL7Segment | null;
     getSegments(segmentName: string, nmbr: number, fieldName: string, joinChar?: string): string | string[] | null;
+    toFHIR(): Record<string, unknown>;
 }
 declare class HL7Segment {
     typeofSegment: string;
@@ -54,6 +55,7 @@ declare class hl7Parser extends EventEmitter {
     HL7Segment: typeof HL7Segment;
     constructor(options?: HL7ParserOptions);
     parse(messageContent: string, ID: string, wrappedDone?: (err: unknown, hl7msg?: Hl7Message) => void): Promise<Hl7Message>;
+    parseXML(xmlContent: string, ID: string, wrappedDone?: (err: unknown, hl7msg?: Hl7Message) => void): Promise<Hl7Message>;
     parseFile(filepath: string, wrappedDone?: (err: unknown, message?: Hl7Message) => void): Promise<Hl7Message>;
 }
 export { MLLPServer, MLLPClient, wrap as mllpWrap, unwrap as mllpUnwrap, VT, FS_CR } from './mllp';
