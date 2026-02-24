@@ -40,7 +40,7 @@ declare class HL7Segment {
     constructor(typeofSegment: string, order: number, parts: (string | string[])[]);
     toMappedObject(compact?: boolean): Record<string, string | string[]>;
     get(nameField: string, joinChar?: string): string | string[] | null;
-    set(nameField: string, value?: string | string[]): void;
+    set(nameField: string, value: string | string[]): void;
 }
 declare class hl7Parser extends EventEmitter {
     options: HL7ParserOptions;

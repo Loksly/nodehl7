@@ -67,7 +67,7 @@ class Hl7Message {
     set(segmentName, fieldName, value) {
         for (let i = 0, j = this.segments.length; i < j; i++) {
             if (this.segments[i].typeofSegment === segmentName) {
-                if (typeof fieldName === 'undefined') {
+                if (typeof fieldName === 'undefined' || typeof value === 'undefined') {
                     return;
                 }
                 this.segments[i].set(fieldName, value);
@@ -146,7 +146,7 @@ class HL7Segment {
     set(nameField, value) {
         if (typeof this.segmentsFields[this.typeofSegment] !== 'undefined') {
             const idx = this.segmentsFields[this.typeofSegment].indexOf(nameField);
-            if (idx >= 0 && value !== undefined) {
+            if (idx >= 0) {
                 this.parts[idx] = value;
             }
         }
