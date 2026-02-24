@@ -48,5 +48,6 @@ declare class hl7Parser extends EventEmitter {
     parse(messageContent: string, ID: string, wrappedDone?: (err: any, hl7msg?: Hl7Message) => void): Promise<Hl7Message>;
     parseFile(filepath: string, wrappedDone?: (err: any, message?: Hl7Message) => void): Promise<Hl7Message>;
 }
+export { MLLPServer, MLLPClient, wrap as mllpWrap, unwrap as mllpUnwrap, VT, FS_CR } from './mllp';
 export default hl7Parser;
 //# sourceMappingURL=hl7.d.ts.map

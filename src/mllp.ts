@@ -1,0 +1,281 @@
+import * as net from 'net';
+import * as tls from 'tls';
+import { EventEmitter } from 'events';
+
+const VT = Buffer.from([0x0b]);
+const FS_CR = Buffer.from([0x1c, 0x0d]);
+
+/**
+ * Wraps an HL7 message with MLLP framing bytes.
+ * @param data - The HL7 message string or Buffer to wrap.
+ * @returns A Buffer containing the MLLP-framed message.
+ */
+function wrap(data: string | Buffer): Buffer {
+	const payload = Buffer.isBuffer(data) ? data : Buffer.from(data);
+	return Buffer.concat([VT, payload, FS_CR]);
+}
+
+/**
+ * Extracts HL7 messages from a buffer containing MLLP-framed data.
+ * Returns an object with extracted messages and any remaining (incomplete) data.
+ * @param buffer - The buffer to extract messages from.
+ * @returns An object with `messages` array and `remainder` Buffer.
+ */
+function unwrap(buffer: Buffer): { messages: Buffer[]; remainder: Buffer } {
+	const messages: Buffer[] = [];
+	let remainder = buffer;
+
+	while (remainder.length > 0) {
+		const startIdx = remainder.indexOf(VT[0]);
+		if (startIdx < 0) {
+			// No start byte found; discard everything
+			remainder = Buffer.alloc(0);
+			break;
+		}
+
+		// Discard any data before the start byte
+		if (startIdx > 0) {
+			remainder = remainder.subarray(startIdx);
+		}
+
+		// Look for end sequence (FS + CR)
+		let endIdx = -1;
+		for (let i = 1; i < remainder.length - 1; i++) {
+			if (remainder[i] === FS_CR[0] && remainder[i + 1] === FS_CR[1]) {
+				endIdx = i;
+				break;
+			}
+		}
+
+		if (endIdx < 0) {
+			// No complete end sequence found yet; keep remainder for next read
+			break;
+		}
+
+		// Extract message payload (between VT and FS+CR)
+		const payload = remainder.subarray(1, endIdx);
+		messages.push(Buffer.from(payload));
+		remainder = remainder.subarray(endIdx + 2);
+	}
+
+	return { messages, remainder };
+}
+
+type MessageHandler = (message: Buffer, reply: (response: string | Buffer) => void) => void;
+
+interface MLLPServerOptions {
+	tls?: tls.TlsOptions;
+}
+
+interface MLLPClientOptions {
+	tls?: tls.ConnectionOptions;
+}
+
+/**
+ * MLLP Server - a TCP/TLS server that handles MLLP-framed HL7 messages.
+ *
+ * Emits:
+ *  - 'hl7_message' with (message: Buffer, reply: Function, socket: net.Socket)
+ *  - 'error' on framing or server errors
+ *
+ * Usage:
+ *   const server = new MLLPServer((message, reply) => { ... });
+ *   server.listen(port);
+ *
+ *   // OR event-based:
+ *   const server = new MLLPServer();
+ *   server.on('hl7_message', (message, reply) => { ... });
+ *   server.listen(port);
+ *
+ *   // With TLS:
+ *   const server = new MLLPServer(handler, { tls: { key, cert } });
+ *   server.listen(port);
+ */
+class MLLPServer extends EventEmitter {
+	private _messageHandler: MessageHandler | null;
+	private _server: net.Server;
+
+	constructor(handler?: MessageHandler | MLLPServerOptions, options?: MLLPServerOptions) {
+		super();
+
+		let resolvedHandler: MessageHandler | null = null;
+		let resolvedOptions: MLLPServerOptions | undefined;
+
+		if (typeof handler === 'function') {
+			resolvedHandler = handler;
+			resolvedOptions = options;
+		} else if (typeof handler === 'object' && handler !== null) {
+			resolvedOptions = handler;
+		}
+
+		this._messageHandler = resolvedHandler;
+
+		const connectionHandler = (socket: net.Socket): void => {
+			let buffer: Buffer = Buffer.alloc(0);
+
+			socket.on('data', (data: Buffer) => {
+				buffer = Buffer.concat([buffer, data]);
+
+				const result = unwrap(buffer);
+				buffer = result.remainder as Buffer;
+
+				for (const msg of result.messages) {
+					const reply = (response: string | Buffer): void => {
+						socket.write(wrap(response));
+					};
+
+					this.emit('hl7_message', msg, reply, socket);
+
+					if (this._messageHandler) {
+						this._messageHandler(msg, reply);
+					}
+				}
+			});
+
+			socket.on('error', (err: Error) => {
+				this.emit('error', err);
+			});
+		};
+
+		if (resolvedOptions && resolvedOptions.tls) {
+			this._server = tls.createServer(resolvedOptions.tls, connectionHandler);
+		} else {
+			this._server = net.createServer(connectionHandler);
+		}
+
+		this._server.on('error', (err: Error) => {
+			this.emit('error', err);
+		});
+	}
+
+	listen(port?: number, hostname?: string, backlog?: number, listeningListener?: () => void): this;
+	listen(port?: number, hostname?: string, listeningListener?: () => void): this;
+	listen(port?: number, listeningListener?: () => void): this;
+	listen(options: net.ListenOptions, listeningListener?: () => void): this;
+	listen(...args: any[]): this {
+		this._server.listen(...args);
+		return this;
+	}
+
+	close(callback?: (err?: Error) => void): this {
+		this._server.close(callback);
+		return this;
+	}
+
+	address(): net.AddressInfo | string | null {
+		return this._server.address();
+	}
+}
+
+/**
+ * MLLP Client - connects to an MLLP server, sends HL7 messages,
+ * and returns the server's response.
+ *
+ * Usage:
+ *   const client = new MLLPClient('127.0.0.1', 2575);
+ *   const response = await client.send(hl7Message);
+ *   client.close();
+ *
+ *   // With TLS:
+ *   const client = new MLLPClient('127.0.0.1', 2575, { tls: { rejectUnauthorized: false } });
+ *   const response = await client.send(hl7Message);
+ *   client.close();
+ */
+class MLLPClient extends EventEmitter {
+	private _host: string;
+	private _port: number;
+	private _socket: net.Socket | null;
+	private _connected: boolean;
+	private _tlsOptions: tls.ConnectionOptions | undefined;
+
+	constructor(host: string, port: number, options?: MLLPClientOptions) {
+		super();
+		this._host = host;
+		this._port = port;
+		this._socket = null;
+		this._connected = false;
+		this._tlsOptions = options && options.tls ? options.tls : undefined;
+	}
+
+	private _connect(): Promise<net.Socket> {
+		return new Promise((resolve, reject) => {
+			if (this._socket && this._connected) {
+				resolve(this._socket);
+				return;
+			}
+
+			let socket: net.Socket;
+
+			if (this._tlsOptions) {
+				const tlsOpts = Object.assign({}, this._tlsOptions, { host: this._host, port: this._port });
+				socket = tls.connect(tlsOpts, () => {
+					this._connected = true;
+					resolve(socket);
+				});
+			} else {
+				socket = net.createConnection({ host: this._host, port: this._port }, () => {
+					this._connected = true;
+					resolve(socket);
+				});
+			}
+
+			socket.on('error', (err: Error) => {
+				this._connected = false;
+				this.emit('error', err);
+				reject(err);
+			});
+
+			socket.on('close', () => {
+				this._connected = false;
+				this._socket = null;
+			});
+
+			this._socket = socket;
+		});
+	}
+
+	/**
+	 * Send an HL7 message and wait for the server's response.
+	 * @param data - The HL7 message string or Buffer to send.
+	 * @returns A Promise that resolves with the response Buffer.
+	 */
+	send(data: string | Buffer): Promise<Buffer> {
+		return new Promise((resolve, reject) => {
+			this._connect().then((socket) => {
+				let buffer = Buffer.alloc(0);
+
+				const onData = (chunk: Buffer): void => {
+					buffer = Buffer.concat([buffer, chunk]);
+					const { messages } = unwrap(buffer);
+					if (messages.length > 0) {
+						socket.removeListener('data', onData);
+						socket.removeListener('error', onError);
+						resolve(messages[0]);
+					}
+				};
+
+				const onError = (err: Error): void => {
+					socket.removeListener('data', onData);
+					reject(err);
+				};
+
+				socket.on('data', onData);
+				socket.on('error', onError);
+				socket.write(wrap(data));
+			}).catch(reject);
+		});
+	}
+
+	/**
+	 * Close the client connection.
+	 */
+	close(): void {
+		if (this._socket) {
+			this._socket.destroy();
+			this._socket = null;
+			this._connected = false;
+		}
+	}
+}
+
+export { VT, FS_CR, wrap, unwrap, MLLPServer, MLLPClient };

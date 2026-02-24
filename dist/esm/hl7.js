@@ -404,8 +404,15 @@ function getSegmentsInformation() {
     }, {});
 }
 getSegmentsInformation();
+// Re-export MLLP module
+export { MLLPServer, MLLPClient, wrap as mllpWrap, unwrap as mllpUnwrap, VT, FS_CR } from './mllp';
 // CommonJS export
+const mllp = require('./mllp');
 module.exports = hl7Parser;
+module.exports.MLLPServer = mllp.MLLPServer;
+module.exports.MLLPClient = mllp.MLLPClient;
+module.exports.mllpWrap = mllp.wrap;
+module.exports.mllpUnwrap = mllp.unwrap;
 // ES module default export for TypeScript
 export default hl7Parser;
 //# sourceMappingURL=hl7.js.map

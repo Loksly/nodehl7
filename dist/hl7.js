@@ -33,6 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.FS_CR = exports.VT = exports.mllpUnwrap = exports.mllpWrap = exports.MLLPClient = exports.MLLPServer = void 0;
 /* https://www.hl7.org/documentcenter/public_temp_B4666D56-1C23-BA17-0C6D54722F8A5135/wg/conf/Msgadt.pdf */
 const events_1 = require("events");
 const encoding = __importStar(require("encoding"));
@@ -439,8 +440,21 @@ function getSegmentsInformation() {
     }, {});
 }
 getSegmentsInformation();
+// Re-export MLLP module
+var mllp_1 = require("./mllp");
+Object.defineProperty(exports, "MLLPServer", { enumerable: true, get: function () { return mllp_1.MLLPServer; } });
+Object.defineProperty(exports, "MLLPClient", { enumerable: true, get: function () { return mllp_1.MLLPClient; } });
+Object.defineProperty(exports, "mllpWrap", { enumerable: true, get: function () { return mllp_1.wrap; } });
+Object.defineProperty(exports, "mllpUnwrap", { enumerable: true, get: function () { return mllp_1.unwrap; } });
+Object.defineProperty(exports, "VT", { enumerable: true, get: function () { return mllp_1.VT; } });
+Object.defineProperty(exports, "FS_CR", { enumerable: true, get: function () { return mllp_1.FS_CR; } });
 // CommonJS export
+const mllp = require('./mllp');
 module.exports = hl7Parser;
+module.exports.MLLPServer = mllp.MLLPServer;
+module.exports.MLLPClient = mllp.MLLPClient;
+module.exports.mllpWrap = mllp.wrap;
+module.exports.mllpUnwrap = mllp.unwrap;
 // ES module default export for TypeScript
 exports.default = hl7Parser;
 //# sourceMappingURL=hl7.js.map
