@@ -6,6 +6,8 @@
 # nodehl7
 NodeJS Library for parsing HL7 Messages
 
+**Homepage:** [https://loksly.github.io/nodehl7/](https://loksly.github.io/nodehl7/)
+
 This library provides an easy way to parse HL7 Messages v.2.x, text-based, no XML format.
 Note there is another package named [node-hl7](https://github.com/ekryski/node-hl7) that provides a different API. 
 
@@ -667,7 +669,38 @@ try {
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! Here's how you can help:
+
+### How to Contribute
+
+1. **Fork the repository** and create your branch from `master`.
+2. **Install dependencies**: `npm install`
+3. **Make your changes** in the `src/` directory.
+4. **Add tests** for any new functionality in the `test/` directory.
+5. **Run tests**: `npm test` to ensure all tests pass.
+6. **Run coverage**: `npm run coverage` to check code coverage.
+7. **Submit a pull request** with a clear description of your changes.
+
+### Reporting Issues
+
+- Use the [GitHub Issues](https://github.com/Loksly/nodehl7/issues) page to report bugs.
+- Include a clear description of the issue, steps to reproduce, and expected behavior.
+- If possible, include a sample HL7 message that demonstrates the problem.
+
+### Development Setup
+
+```bash
+git clone https://github.com/Loksly/nodehl7.git
+cd nodehl7
+npm install
+npm test
+```
+
+### Code Style
+
+- Follow the existing code style and conventions.
+- Use TypeScript for all source files in `src/`.
+- Ensure TypeScript compiles without errors before submitting.
 
 ## License
 
