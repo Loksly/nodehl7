@@ -1,0 +1,23 @@
+import { SegmentInfo } from './types';
+
+export const PSHSegmentDef = {
+  name: 'PSH' as const,
+  fields: [
+  "Report Type",
+  "Report Form Identifier",
+  "Report Date",
+  "Report Interval Start Date",
+  "Report Interval End Date",
+  "Quantity Manufactured",
+  "Quantity Distributed",
+  "Quantity Distributed Method",
+  "Quantity Distributed Comment",
+  "Quantity in Use",
+  "Quantity in Use Method",
+  "Quantity in Use Comment",
+  "Number of Product Experience Reports Filed by Facility",
+  "Number of Product Experience Reports Filed by Distributor",
+  ] as const,
+} satisfies SegmentInfo;
+
+export type PSHFieldName = typeof PSHSegmentDef.fields[number];

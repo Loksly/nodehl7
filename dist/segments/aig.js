@@ -1,0 +1,24 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.AIGSegmentDef = void 0;
+exports.AIGSegmentDef = {
+    name: 'AIG',
+    fields: [
+        "Set ID - AIG",
+        "Segment Action Code",
+        "Resource ID",
+        "Resource Type",
+        "Resource Group",
+        "Resource Quantity",
+        "Resource Quantity Units",
+        "Start Date/Time",
+        "Start Date/Time Offset",
+        "Start Date/Time Offset Units",
+        "Duration",
+        "Duration Units",
+        "Allow Substitution Code",
+        "Filler Status Code",
+        "Universal Service Identifier",
+    ],
+};
+//# sourceMappingURL=aig.js.map

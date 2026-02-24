@@ -1,0 +1,1 @@
+{"version":3,"file":"aig.js","sourceRoot":"","sources":["../../../src/segments/aig.ts"],"names":[],"mappings":"AAEA,MAAM,CAAC,MAAM,aAAa,GAAG;IAC3B,IAAI,EAAE,KAAc;IACpB,MAAM,EAAE;QACR,cAAc;QACd,qBAAqB;QACrB,aAAa;QACb,eAAe;QACf,gBAAgB;QAChB,mBAAmB;QACnB,yBAAyB;QACzB,iBAAiB;QACjB,wBAAwB;QACxB,8BAA8B;QAC9B,UAAU;QACV,gBAAgB;QAChB,yBAAyB;QACzB,oBAAoB;QACpB,8BAA8B;KACpB;CACW,CAAC"}

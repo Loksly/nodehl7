@@ -1,0 +1,15 @@
+export const RXCSegmentDef = {
+    name: 'RXC',
+    fields: [
+        "RX Component Type",
+        "Component Code",
+        "Component Amount",
+        "Component Units",
+        "Component Strength",
+        "Component Strength Units",
+        "Supplementary Code",
+        "Component Drug Strength Volume",
+        "Component Drug Strength Volume Units",
+    ],
+};
+//# sourceMappingURL=rxc.js.map

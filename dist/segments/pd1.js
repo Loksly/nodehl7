@@ -1,0 +1,21 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.PD1SegmentDef = void 0;
+exports.PD1SegmentDef = {
+    name: 'PD1',
+    fields: [
+        "Living Dependency",
+        "Living Arrangement",
+        "Patient Primary Facility",
+        "Patient Primary Care Provider Name & ID No.",
+        "Student Indicator",
+        "Handicap",
+        "Living Will",
+        "Organ Donor",
+        "Separate Bill",
+        "Duplicate Patient",
+        "Publicity Indicator",
+        "Protection Indicator",
+    ],
+};
+//# sourceMappingURL=pd1.js.map

@@ -1,0 +1,26 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.OBXSegmentDef = void 0;
+exports.OBXSegmentDef = {
+    name: 'OBX',
+    fields: [
+        "Set ID - OBX",
+        "Value Type",
+        "Observation Identifier",
+        "Observation Sub-ID",
+        "Observation Value",
+        "Units",
+        "References Range",
+        "Abnormal Flags",
+        "Probability",
+        "Nature of Abnormal Test",
+        "Observ Result Status",
+        "Date Last Obs Normal Values",
+        "User Defined Access Checks",
+        "Date/Time of the Observation",
+        "Producer's ID",
+        "Responsible Observer",
+        "Observation Method",
+    ],
+};
+//# sourceMappingURL=obx.js.map

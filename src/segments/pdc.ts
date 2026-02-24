@@ -1,0 +1,24 @@
+import { SegmentInfo } from './types';
+
+export const PDCSegmentDef = {
+  name: 'PDC' as const,
+  fields: [
+  "Manufacturer/Distributor",
+  "Country",
+  "Brand Name",
+  "Device Family Name",
+  "Generic Name",
+  "Model Identifier",
+  "Catalogue Identifier",
+  "Other Identifier",
+  "Product Code",
+  "Marketing Basis",
+  "Marketing Approval ID",
+  "Labeled Shelf Life",
+  "Expected Shelf Life",
+  "Date First Marketed",
+  "Date Last Marketed",
+  ] as const,
+} satisfies SegmentInfo;
+
+export type PDCFieldName = typeof PDCSegmentDef.fields[number];

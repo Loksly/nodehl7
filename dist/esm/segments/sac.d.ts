@@ -1,0 +1,6 @@
+export declare const SACSegmentDef: {
+    name: "SAC";
+    fields: readonly ["External Accession Identifier", "Accession Identifier", "Container Identifier", "Primary (parent) Container Identifier", "Equipment Container Identifier", "Specimen Source", "Registration Date/Time", "Container Status", "Carrier Type", "Carrier Identifier", "Position In Carrier", "Tray Type - Sac", "Tray Identifier", "Position In Tray", "Location", "Container Height", "Container Diameter", "Barrier Delta", "Bottom Delta", "Container Height/Diameter/Delta Units", "Container Volume", "Available Specimen Volume", "Initial Specimen Volume", "Volume Units", "Separator Type", "Cap Type", "Additive", "Specimen Component", "Dilution Factor", "Treatment", "Temperature", "Hemolysis Index", "Hemolysis Index Units", "Lipemia Index", "Lipemia Index Units", "Icterus Index", "Icterus Index Units", "Fibrin Index", "Fibrin Index Units", "System Induced Contaminants", "Drug Interference", "Artificial Blood", "Special Handling Code", "Other Environmental Factors"];
+};
+export type SACFieldName = typeof SACSegmentDef.fields[number];
+//# sourceMappingURL=sac.d.ts.map

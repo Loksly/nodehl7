@@ -1,0 +1,6 @@
+export declare const RXDSegmentDef: {
+    name: "RXD";
+    fields: readonly ["Dispense Sub-ID Counter", "Dispense/Give Code", "Date/Time Dispensed", "Actual Dispense Amount", "Actual Dispense Units", "Actual Dosage Form", "Prescription Number", "Number of Refills Remaining", "Dispense Notes", "Dispensing Provider", "Substitution Status", "Total Daily Dose", "Dispense-to Location", "Needs Human Review", "Pharmacy/Treatment Supplier's Special Dispensing Instructions", "Actual Strength", "Actual Strength Unit", "Substance Lot Number", "Substance Expiration Date", "Substance Manufacturer Name", "Indication", "Dispense Package Size", "Dispense Package Size Unit", "Dispense Package Method", "Supplementary Code", "Initiating Location", "Packaging/Assembly Location", "Actual Drug Strength Volume", "Actual Drug Strength Volume Units", "Dispense to Pharmacy", "Dispense to Pharmacy Address", "Pharmacy Order Type", "Dispense Type"];
+};
+export type RXDFieldName = typeof RXDSegmentDef.fields[number];
+//# sourceMappingURL=rxd.d.ts.map
