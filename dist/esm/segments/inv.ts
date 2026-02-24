@@ -1,0 +1,29 @@
+import { SegmentInfo } from './types';
+
+export const INVSegmentDef = {
+  name: 'INV' as const,
+  fields: [
+  "Substance Identifier",
+  "Substance Status",
+  "Substance Type",
+  "Inventory Container Identifier",
+  "Container Carrier Identifier",
+  "Position On Carrier",
+  "Initial Quantity",
+  "Current Quantity",
+  "Available Quantity",
+  "Consumption Quantity",
+  "Quantity Units",
+  "Expiration Date/Time",
+  "First Used Date/Time",
+  "On Board Stability Duration",
+  "Test/Fluid Identifier(s)",
+  "Manufacturer Lot Number",
+  "Manufacturer Identifier",
+  "Supplier Identifier",
+  "On Board Stability Time",
+  "Target Value",
+  ] as const,
+} satisfies SegmentInfo;
+
+export type INVFieldName = typeof INVSegmentDef.fields[number];

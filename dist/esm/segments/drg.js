@@ -1,0 +1,17 @@
+export const DRGSegmentDef = {
+    name: 'DRG',
+    fields: [
+        "Diagnostic Related Group",
+        "DRG Assigned Date/Time",
+        "DRG Approval Indicator",
+        "DRG Grouper Review Code",
+        "Outlier Type",
+        "Outlier Days",
+        "Outlier Cost",
+        "DRG Payor",
+        "Outlier Reimbursement",
+        "Confidential Indicator",
+        "DRG Transfer Type",
+    ],
+};
+//# sourceMappingURL=drg.js.map

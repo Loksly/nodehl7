@@ -1,0 +1,32 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.UB1SegmentDef = void 0;
+exports.UB1SegmentDef = {
+    name: 'UB1',
+    fields: [
+        "Set ID - UB1",
+        "Blood Deductible",
+        "Blood Furnished-Pints",
+        "Blood Replaced-Pints",
+        "Blood Not Replaced-Pints",
+        "Co-Insurance Days",
+        "Condition Code",
+        "Covered Days",
+        "Non Covered Days",
+        "Value Amount & Code",
+        "Number Of Grace Days",
+        "Special Program Indicator",
+        "PSRO/UR Approval Indicator",
+        "PSRO/UR Approved Stay-Fm",
+        "PSRO/UR Approved Stay-To",
+        "Occurrence",
+        "Occurrence Span",
+        "Occur Span Start Date",
+        "Occur Span End Date",
+        "UB-82 Locator 2",
+        "UB-82 Locator 9",
+        "UB-82 Locator 27",
+        "UB-82 Locator 45",
+    ],
+};
+//# sourceMappingURL=ub1.js.map

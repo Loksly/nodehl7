@@ -2,7 +2,7 @@
 import { EventEmitter } from 'events';
 import * as encoding from 'encoding';
 import * as fs from 'fs';
-import * as path from 'path';
+import { allSegmentDefs } from './segments';
 let validSegmentsName = [];
 const shallowClone = function (obj) {
     const copy = {};
@@ -18,7 +18,6 @@ class Hl7Message {
         this.friendlyID = friendlyID;
     }
     get(segmentName, fieldName, joinChar) {
-        let returningValue = null;
         for (let i = 0, j = this.segments.length; i < j; i++) {
             if (this.segments[i].typeofSegment === segmentName) {
                 if (typeof fieldName === 'undefined') {
@@ -27,12 +26,12 @@ class Hl7Message {
                 return this.segments[i].get(fieldName, joinChar);
             }
         }
-        return returningValue;
+        return null;
     }
     set(segmentName, fieldName, value) {
         for (let i = 0, j = this.segments.length; i < j; i++) {
             if (this.segments[i].typeofSegment === segmentName) {
-                if (typeof fieldName === 'undefined') {
+                if (typeof fieldName === 'undefined' || typeof value === 'undefined') {
                     return;
                 }
                 this.segments[i].set(fieldName, value);
@@ -90,22 +89,23 @@ class HL7Segment {
             return obj;
         }
         else {
-            this.logger.error('ERROR, unknown segmentType: ' + this.typeofSegment);
+            if (this.logger) {
+                this.logger.error('ERROR, unknown segmentType: ' + this.typeofSegment);
+            }
             return {};
         }
     }
     get(nameField, joinChar) {
-        let returningValue = null;
         if (typeof this.segmentsFields[this.typeofSegment] !== 'undefined') {
             const idx = this.segmentsFields[this.typeofSegment].indexOf(nameField);
             if (idx >= 0 && typeof joinChar !== 'undefined' && (typeof this.parts[idx] === 'object')) {
                 return this.parts[idx].join(joinChar);
             }
             else {
-                return (idx < 0) ? returningValue : this.parts[idx];
+                return (idx < 0) ? null : this.parts[idx];
             }
         }
-        return returningValue;
+        return null;
     }
     set(nameField, value) {
         if (typeof this.segmentsFields[this.typeofSegment] !== 'undefined') {
@@ -145,7 +145,7 @@ const escapeChars = function (text, equivalences) {
 };
 function validSegmentType(segmentname, ID, logger) {
     if (validSegmentsName.indexOf(segmentname) < 0) {
-        if (typeof logger === 'object' && typeof logger.error === 'function') {
+        if (logger) {
             logger.error('Unknown segmentType (' + ID + '): ' + segmentname);
         }
         return (segmentname.length === 3);
@@ -154,7 +154,7 @@ function validSegmentType(segmentname, ID, logger) {
 }
 function isRecoverable(typeofSegment, parts, isFirst) {
     return ((parts.length > 0 &&
-        (endsWith(parts[parts.length - 1], '\\X000d\\'))) || endsWith(typeofSegment, '\\X000d\\')) && !isFirst;
+        (endsWith(String(parts[parts.length - 1]), '\\X000d\\'))) || endsWith(typeofSegment, '\\X000d\\')) && !isFirst;
 }
 function escapeRegExp(string) {
     return string.replace(/([.*+?^=!:${}()|\[\]\/\\])/g, '\\$1');
@@ -167,12 +167,9 @@ class hl7Parser extends EventEmitter {
         this.IOERROR = 3000;
         options = shallowClone(options);
         this.options = options;
-        this.logger = this.options.logger;
+        this.logger = this.options.logger || console;
         if (typeof this.options.mapping === 'undefined') {
             this.options.mapping = false;
-        }
-        if (typeof this.options.logger === 'undefined') {
-            this.logger = console;
         }
         if (typeof this.options.fs === 'undefined') {
             this.options.fs = fs;
@@ -205,7 +202,7 @@ class hl7Parser extends EventEmitter {
                     }
                     if (hl7msg) {
                         const tipoMsg = hl7msg.get('EVN', 'Event Type Code');
-                        if (tipoMsg !== null && self.listeners(tipoMsg).length > 0) {
+                        if (tipoMsg !== null && typeof tipoMsg === 'string' && self.listeners(tipoMsg).length > 0) {
                             self.emit(tipoMsg, hl7msg);
                         }
                     }
@@ -308,8 +305,9 @@ class hl7Parser extends EventEmitter {
     parseFile(filepath, wrappedDone) {
         const self = this;
         const fileEncoding = self.options.fileEncoding;
+        const fsModule = self.options.fs;
         return new Promise((resolve, reject) => {
-            self.options.fs.stat(filepath, function (err, stats) {
+            fsModule.stat(filepath, function (err, stats) {
                 if (err) {
                     if (self.listeners('error').length > 0) {
                         self.emit('error', err);
@@ -320,10 +318,10 @@ class hl7Parser extends EventEmitter {
                     reject(err);
                     return;
                 }
-                self.options.fs.open(filepath, 'r', function (erro, fd) {
+                fsModule.open(filepath, 'r', function (erro, fd) {
                     if (erro || !fd) {
                         if (fd) {
-                            self.options.fs.close(fd);
+                            fsModule.close(fd, () => { });
                         }
                         if (self.listeners('error').length > 0) {
                             self.emit('error', erro);
@@ -337,7 +335,7 @@ class hl7Parser extends EventEmitter {
                     const size = stats.size;
                     if (size <= 0) {
                         if (fd) {
-                            self.options.fs.close(fd);
+                            fsModule.close(fd, () => { });
                         }
                         const error = { msg: 'Size <=0 (' + size + ')', friendlyID: filepath };
                         if (self.listeners('error').length > 0) {
@@ -353,9 +351,9 @@ class hl7Parser extends EventEmitter {
                     const bufferOffset = 0;
                     const bufferLength = readBuffer.length;
                     const filePosition = 0;
-                    self.options.fs.read(fd, readBuffer, bufferOffset, bufferLength, filePosition, function (fail, readBytes) {
+                    fsModule.read(fd, readBuffer, bufferOffset, bufferLength, filePosition, function (fail, readBytes) {
                         if (fd) {
-                            self.options.fs.close(fd, function (err) {
+                            fsModule.close(fd, function (err) {
                                 if (err) {
                                     self.logger.error(err);
                                 }
@@ -386,19 +384,10 @@ class hl7Parser extends EventEmitter {
     }
 }
 function getSegmentsInformation() {
-    const files = fs.readdirSync(path.join(__dirname, 'segments'));
-    const segmentsinfo = files.filter(function (filename) {
-        return filename.endsWith('.json');
-    }).map(function (filename) {
-        return String(fs.readFileSync(path.join(__dirname, 'segments', filename), 'utf8'));
-    }).map(function (content) {
-        return JSON.parse(content);
+    validSegmentsName = allSegmentDefs.map(function (segDef) {
+        return segDef.name;
     });
-    validSegmentsName = segmentsinfo.reduce(function (p, c) {
-        p.push(c.name);
-        return p;
-    }, []);
-    HL7Segment.prototype.segmentsFields = segmentsinfo.reduce(function (p, c) {
+    HL7Segment.prototype.segmentsFields = allSegmentDefs.reduce(function (p, c) {
         p[c.name] = c.fields;
         return p;
     }, {});

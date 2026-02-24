@@ -1,0 +1,20 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ACCSegmentDef = void 0;
+exports.ACCSegmentDef = {
+    name: 'ACC',
+    fields: [
+        "Accident Date/Time",
+        "Accident Code",
+        "Accident Location",
+        "Auto Accident State",
+        "Accident Job Related Indicator",
+        "Accident Death Indicator",
+        "Entered By",
+        "Accident Description",
+        "Brought In By",
+        "Police Notified Indicator",
+        "Accident Address",
+    ],
+};
+//# sourceMappingURL=acc.js.map

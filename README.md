@@ -6,12 +6,16 @@
 # nodehl7
 NodeJS Library for parsing HL7 Messages
 
+**Homepage:** [https://loksly.github.io/nodehl7/](https://loksly.github.io/nodehl7/)
+
 This library provides an easy way to parse HL7 Messages v.2.x, text-based, no XML format.
 Note there is another package named [node-hl7](https://github.com/ekryski/node-hl7) that provides a different API. 
 
 ## Features
 
 - ✅ **TypeScript Support**: Full TypeScript definitions with type safety
+- ✅ **Typed Segment Definitions**: Each segment (PID, MSH, OBX, etc.) has its own TypeScript type with typed field names for autocompletion
+- ✅ **Type-safe Segment Access**: `message.get('PID')` returns a typed `PIDSegment` instead of a generic segment
 - ✅ **Promise-based API**: Modern async/await support with backward-compatible callbacks
 - ✅ **Dual Module Format**: Both CommonJS and ES Modules supported
 - ✅ **Event Emitter**: Subscribe to parse events
@@ -263,8 +267,8 @@ new Hl7Parser(config?)
 - `profiling` (boolean): Enable profiling
 - `debug` (boolean): Enable debug mode
 - `fileEncoding` (string): File encoding (default: 'utf8', example: 'iso-8859-1')
-- `logger` (object): Custom logger object
-- `fs` (object): Custom filesystem object
+- `logger` (`Pick<Console, 'error'>`): Custom logger object — must provide an `error()` method (defaults to `console`)
+- `fs` (`Pick<typeof fs, 'stat' | 'open' | 'close' | 'read'>`): Custom filesystem object — must provide `stat`, `open`, `close`, and `read` methods (defaults to Node.js `fs`)
 
 #### Methods
 
@@ -643,6 +647,32 @@ HL7Segment.prototype.segmentsFields = {
 
 ## Migration Guide
 
+### From v1.x to v2.0.0
+
+Version 2.0.0 introduces typed segment definitions and stricter TypeScript types. Most users won't need any code changes — this is only a concern if you pass custom `logger` or `fs` options.
+
+**Custom logger** — Must now satisfy `Pick<Console, 'error'>`:
+```typescript
+// Before (any object was accepted)
+new Hl7Parser({ logger: myLogger });
+
+// After (must have an error() method compatible with Console.error)
+const myLogger = { error: (...args: any[]) => { /* ... */ } };
+new Hl7Parser({ logger: myLogger });
+```
+
+**Custom fs** — Must now satisfy `Pick<typeof fs, 'stat' | 'open' | 'close' | 'read'>`:
+```typescript
+// Must provide stat, open, close, and read methods
+new Hl7Parser({ fs: myCustomFs });
+```
+
+**Typed segment access** — `message.get('PID')` now returns `PIDSegment | null` instead of `HL7Segment | null` for known segment names:
+```typescript
+const pid = message.get('PID'); // PIDSegment | null
+const name = message.get('PID', 'Patient name'); // string | string[] | null
+```
+
 ### From Callbacks to Promises
 
 If you're upgrading from an older version, the API is fully backward compatible. You can migrate to promises gradually:
@@ -667,7 +697,38 @@ try {
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! Here's how you can help:
+
+### How to Contribute
+
+1. **Fork the repository** and create your branch from `master`.
+2. **Install dependencies**: `npm install`
+3. **Make your changes** in the `src/` directory.
+4. **Add tests** for any new functionality in the `test/` directory.
+5. **Run tests**: `npm test` to ensure all tests pass.
+6. **Run coverage**: `npm run coverage` to check code coverage.
+7. **Submit a pull request** with a clear description of your changes.
+
+### Reporting Issues
+
+- Use the [GitHub Issues](https://github.com/Loksly/nodehl7/issues) page to report bugs.
+- Include a clear description of the issue, steps to reproduce, and expected behavior.
+- If possible, include a sample HL7 message that demonstrates the problem.
+
+### Development Setup
+
+```bash
+git clone https://github.com/Loksly/nodehl7.git
+cd nodehl7
+npm install
+npm test
+```
+
+### Code Style
+
+- Follow the existing code style and conventions.
+- Use TypeScript for all source files in `src/`.
+- Ensure TypeScript compiles without errors before submitting.
 
 ## License
 

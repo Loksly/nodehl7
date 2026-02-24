@@ -1,0 +1,6 @@
+export declare const PV2SegmentDef: {
+    name: "PV2";
+    fields: readonly ["Prior Pending Location", "Accommodation Code", "Admit Reason", "Transfer Reason", "Patient Valuables", "Patient Valuables Location", "Visit User Code", "Expected Admit Date", "Expected Discharge Date", "Estimated Length of Inpatient Stay", "Actual Length of Inpatient Stay", "Visit Description", "Referral Source Code", "Previous Service Date", "Employment Illness Related Indicator", "Purge Status Code", "Purge Status Date", "Special Program Code", "Retention Indicator", "Expected Number of Insurance Plans", "Visit Publicity Code", "Visit Protection Indicator", "Clinic Organization Name", "Patient Status Code", "Visit Priority Code", "Previous Treatment Date", "Expected Discharge Disposition", "Signature on File Date", "First Similar Illness Date", "Patient Charge Adjustment Code", "Recurring Service Code", "Billing Media Code", "Expected Surgery Date & Time", "Military Partnership Code", "Military Non-Availability Code", "Newborn Baby Indicator", "Baby Detained Indicator"];
+};
+export type PV2FieldName = typeof PV2SegmentDef.fields[number];
+//# sourceMappingURL=pv2.d.ts.map

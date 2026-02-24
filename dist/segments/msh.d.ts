@@ -1,0 +1,6 @@
+export declare const MSHSegmentDef: {
+    name: "MSH";
+    fields: readonly ["Encoding characters", "Sending application", "Sending facility", "Receiving application", "Receiving facility", "Date/time of message", "Security", "Message type", "Message control ID", "Processing ID", "Version ID", "Sequence number", "Continuation pointer", "Accept acknowledgement type", "Application acknowledgement type", "Country code", "Character set", "Principal language of message", "Alternate character set handling"];
+};
+export type MSHFieldName = typeof MSHSegmentDef.fields[number];
+//# sourceMappingURL=msh.d.ts.map

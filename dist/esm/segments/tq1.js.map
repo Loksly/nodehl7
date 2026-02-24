@@ -1,0 +1,1 @@
+{"version":3,"file":"tq1.js","sourceRoot":"","sources":["../../../src/segments/tq1.ts"],"names":[],"mappings":"AAEA,MAAM,CAAC,MAAM,aAAa,GAAG;IAC3B,IAAI,EAAE,KAAc;IACpB,MAAM,EAAE;QACR,cAAc;QACd,UAAU;QACV,gBAAgB;QAChB,eAAe;QACf,yBAAyB;QACzB,kBAAkB;QAClB,iBAAiB;QACjB,eAAe;QACf,UAAU;QACV,gBAAgB;QAChB,kBAAkB;QAClB,aAAa;QACb,qBAAqB;QACrB,mBAAmB;KACT;CACW,CAAC"}

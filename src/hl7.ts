@@ -2,9 +2,15 @@
 import { EventEmitter } from 'events';
 import * as encoding from 'encoding';
 import * as fs from 'fs';
-import * as path from 'path';
+import { allSegmentDefs, SegmentName, SegmentTypeMap, SegmentsFields } from './segments';
+
+export { SegmentName, SegmentTypeMap, SegmentsFields } from './segments';
+export type { SegmentFieldNameMap, HL7SegmentBase } from './segments';
 
 let validSegmentsName: string[] = [];
+
+type HL7Logger = Pick<Console, 'error'>;
+type HL7FileSystem = Pick<typeof fs, 'stat' | 'open' | 'close' | 'read'>;
 
 interface Delimiters {
 	composite: string;
@@ -16,8 +22,8 @@ interface Delimiters {
 
 interface HL7ParserOptions {
 	mapping?: boolean;
-	logger?: any;
-	fs?: any;
+	logger?: HL7Logger;
+	fs?: HL7FileSystem;
 	fileEncoding?: string;
 }
 
@@ -26,17 +32,8 @@ interface Equivalence {
 	value: string;
 }
 
-interface SegmentInfo {
-	name: string;
-	fields: string[];
-}
-
-interface SegmentsFields {
-	[key: string]: string[];
-}
-
-const shallowClone = function(obj: any): any {
-	const copy: any = {};
+const shallowClone = function<T>(obj: T): T {
+	const copy = {} as T;
 	for (const name in obj){
 		copy[name] = obj[name];
 	}
@@ -54,8 +51,11 @@ class Hl7Message {
 		this.friendlyID = friendlyID;
 	}
 
-	get(segmentName: string, fieldName?: string, joinChar?: string): any {
-		let returningValue: any = null;
+	get<S extends SegmentName>(segmentName: S): SegmentTypeMap[S] | null;
+	get<S extends SegmentName>(segmentName: S, fieldName: string, joinChar?: string): string | string[] | null;
+	get(segmentName: string): HL7Segment | null;
+	get(segmentName: string, fieldName: string, joinChar?: string): string | string[] | null;
+	get(segmentName: string, fieldName?: string, joinChar?: string): HL7Segment | string | string[] | null {
 		for (let i = 0, j = this.segments.length; i < j; i++){
 			if (this.segments[i].typeofSegment === segmentName){
 				if (typeof fieldName === 'undefined'){
@@ -64,13 +64,13 @@ class Hl7Message {
 				return this.segments[i].get(fieldName, joinChar);
 			}
 		}
-		return returningValue;
+		return null;
 	}
 
-	set(segmentName: string, fieldName?: string, value?: any): void {
+	set(segmentName: string, fieldName?: string, value?: string | string[]): void {
 		for (let i = 0, j = this.segments.length; i < j; i++){
 			if (this.segments[i].typeofSegment === segmentName){
-				if (typeof fieldName === 'undefined'){
+				if (typeof fieldName === 'undefined' || typeof value === 'undefined'){
 					return;
 				}
 				this.segments[i].set(fieldName, value);
@@ -86,7 +86,10 @@ class Hl7Message {
 		return this.segments.length;
 	}
 
-	getSegments(segmentName: string, nmbr?: number, fieldName?: string, joinChar?: string): HL7Segment[] | HL7Segment | any | null {
+	getSegments(segmentName: string): HL7Segment[];
+	getSegments(segmentName: string, nmbr: number): HL7Segment | null;
+	getSegments(segmentName: string, nmbr: number, fieldName: string, joinChar?: string): string | string[] | null;
+	getSegments(segmentName: string, nmbr?: number, fieldName?: string, joinChar?: string): HL7Segment[] | HL7Segment | string | string[] | null {
 		const returningValue: HL7Segment[] = [];
 		for (let i = 0, j = this.segments.length; i < j; i++){
 			if (this.segments[i].typeofSegment === segmentName){
@@ -113,24 +116,24 @@ class Hl7Message {
 class HL7Segment {
 	typeofSegment: string;
 	order: number;
-	parts: any[];
+	parts: (string | string[])[];
 	segmentsFields: SegmentsFields;
-	logger: any;
+	logger: HL7Logger;
 
-	constructor(typeofSegment: string, order: number, parts: any[]) {
+	constructor(typeofSegment: string, order: number, parts: (string | string[])[]) {
 		this.typeofSegment = typeofSegment;
 		this.order = order;
 		this.parts = parts;
 	}
 
-	toMappedObject(compact?: boolean): any {
+	toMappedObject(compact?: boolean): Record<string, string | string[]> {
 		if (typeof this.segmentsFields[ this.typeofSegment ] === 'object')
 		{
 			if (typeof compact === 'undefined'){
 				compact = false;
 			}
 
-			const obj: any = {};
+			const obj: Record<string, string | string[]> = {};
 			const fields = this.segmentsFields[ this.typeofSegment ];
 
 			for (let i = 0; i < this.parts.length && i < fields.length; i++){
@@ -140,25 +143,26 @@ class HL7Segment {
 			}
 			return obj;
 		} else {
-			this.logger.error('ERROR, unknown segmentType: ' + this.typeofSegment);
+			if (this.logger) {
+				this.logger.error('ERROR, unknown segmentType: ' + this.typeofSegment);
+			}
 			return {};
 		}
 	}
 
-	get(nameField: string, joinChar?: string): any {
-		let returningValue: any = null;
+	get(nameField: string, joinChar?: string): string | string[] | null {
 		if (typeof this.segmentsFields[this.typeofSegment] !== 'undefined'){
 			const idx = this.segmentsFields[this.typeofSegment].indexOf(nameField);
 			if (idx >= 0 && typeof joinChar !== 'undefined' && (typeof this.parts[idx] === 'object')){
-				return this.parts[idx].join(joinChar);
+				return (this.parts[idx] as string[]).join(joinChar);
 			} else {
-				return (idx < 0) ? returningValue : this.parts[idx];
+				return (idx < 0) ? null : this.parts[idx];
 			}
 		}
-		return returningValue;
+		return null;
 	}
 
-	set(nameField: string, value: any): void {
+	set(nameField: string, value: string | string[]): void {
 		if (typeof this.segmentsFields[this.typeofSegment] !== 'undefined'){
 			const idx = this.segmentsFields[this.typeofSegment].indexOf(nameField);
 			if (idx >= 0){
@@ -196,9 +200,9 @@ const escapeChars = function(text: string, equivalences: Equivalence[]): string 
 	return text;
 };
 
-function validSegmentType(segmentname: string, ID: string, logger: any): boolean {
+function validSegmentType(segmentname: string, ID: string, logger: HL7Logger): boolean {
 	if (validSegmentsName.indexOf(segmentname) < 0){
-		if (typeof logger === 'object' && typeof logger.error === 'function'){
+		if (logger){
 			logger.error('Unknown segmentType (' + ID + '): ' + segmentname);
 		}
 		return (segmentname.length === 3);
@@ -206,10 +210,10 @@ function validSegmentType(segmentname: string, ID: string, logger: any): boolean
 	return true;
 }
 
-function isRecoverable(typeofSegment: string, parts: any[], isFirst: boolean): boolean {
+function isRecoverable(typeofSegment: string, parts: (string | string[])[], isFirst: boolean): boolean {
 	return	(
 				(parts.length > 0 &&
-					( endsWith(parts[parts.length - 1], '\\X000d\\') ) ) || endsWith(typeofSegment, '\\X000d\\')
+					( endsWith(String(parts[parts.length - 1]), '\\X000d\\') ) ) || endsWith(typeofSegment, '\\X000d\\')
 			) && !isFirst;
 }
 
@@ -219,7 +223,7 @@ function escapeRegExp(string: string): string {
 
 class hl7Parser extends EventEmitter {
 	options: HL7ParserOptions;
-	logger: any;
+	logger: HL7Logger;
 	readonly EMPTY: number = 1000;
 	readonly INVALID: number = 2000;
 	readonly IOERROR: number = 3000;
@@ -229,12 +233,9 @@ class hl7Parser extends EventEmitter {
 		super();
 		options = shallowClone(options);
 		this.options = options;
-		this.logger = this.options.logger;
+		this.logger = this.options.logger || console;
 		if (typeof this.options.mapping === 'undefined'){
 			this.options.mapping = false;
-		}
-		if (typeof this.options.logger === 'undefined'){
-			this.logger = console;
 		}
 		if (typeof this.options.fs === 'undefined'){
 			this.options.fs = fs;
@@ -242,17 +243,17 @@ class hl7Parser extends EventEmitter {
 		this.HL7Segment = HL7Segment;
 	}
 
-	parse(messageContent: string, ID: string, wrappedDone?: (err: any, hl7msg?: Hl7Message) => void): Promise<Hl7Message> {
+	parse(messageContent: string, ID: string, wrappedDone?: (err: unknown, hl7msg?: Hl7Message) => void): Promise<Hl7Message> {
 		const self = this;
 
 		return new Promise<Hl7Message>((resolve, reject) => {
-			const fn = function(donefn: (err: any, result?: any) => void, resultValue: any){
+			const fn = function(donefn: (err: unknown, result?: Hl7Message) => void, resultValue: Hl7Message){
 				return function(){
 					donefn(null, resultValue);
 				};
 			};
 
-			const done = function(err: any, hl7msg?: Hl7Message){
+			const done = function(err: unknown, hl7msg?: Hl7Message){
 				if (err){
 					if (self.listeners('error').length > 0){
 						self.emit('error', err);
@@ -270,7 +271,7 @@ class hl7Parser extends EventEmitter {
 					if (hl7msg) {
 						const tipoMsg = hl7msg.get('EVN', 'Event Type Code');
 
-						if (tipoMsg !== null && self.listeners(tipoMsg).length > 0){
+						if (tipoMsg !== null && typeof tipoMsg === 'string' && self.listeners(tipoMsg).length > 0){
 							self.emit(tipoMsg, hl7msg);
 						}
 					}
@@ -328,15 +329,15 @@ class hl7Parser extends EventEmitter {
 			];
 
 
-			let previousTypeOfSegment = '', previousparts: any[] = [], previousorder = -1;
+			let previousTypeOfSegment = '', previousparts: (string | string[])[] = [], previousorder = -1;
 			for (let segmentnumber = 0, segmentmax = segmentslines.length; segmentnumber < segmentmax; segmentnumber++)
 			{
 				const line = segmentslines[segmentnumber].trim();
 				if (line !== '')
 				{
-					const parts: any[] = line.split(delimiters.composite);
+					const parts: (string | string[])[] = line.split(delimiters.composite);
 					if (parts.length > 0){
-						let typeofSegment = parts.shift()!.trim();
+						let typeofSegment = (parts.shift() as string).trim();
 
 						if (!validSegmentType(typeofSegment, ID, self.logger)){
 							if (isRecoverable(previousTypeOfSegment, previousparts, segmentnumber === 0)){
@@ -353,7 +354,7 @@ class hl7Parser extends EventEmitter {
 						}
 
 						for (let numberOfPart = 0, numberOfParts = parts.length; numberOfPart < numberOfParts; numberOfPart++){
-							const part = parts[numberOfPart];
+							const part = parts[numberOfPart] as string;
 
 							if (((segmentnumber === 0 && numberOfPart !== 0) || segmentnumber !== 0) && part.indexOf(delimiters.subComposite) >= 0 ){
 								let subdivisions = part.split(delimiters.subComposite);
@@ -362,7 +363,7 @@ class hl7Parser extends EventEmitter {
 								}
 								parts[numberOfPart] = subdivisions;
 							} else {
-								parts[numberOfPart] = escapeChars(part, equivalences);
+								parts[numberOfPart] = escapeChars(part as string, equivalences);
 							}
 						}
 
@@ -380,12 +381,13 @@ class hl7Parser extends EventEmitter {
 		});
 	}
 
-	parseFile(filepath: string, wrappedDone?: (err: any, message?: Hl7Message) => void): Promise<Hl7Message> {
+	parseFile(filepath: string, wrappedDone?: (err: unknown, message?: Hl7Message) => void): Promise<Hl7Message> {
 		const self = this;
 		const fileEncoding = self.options.fileEncoding;
+		const fsModule = self.options.fs!;
 
 		return new Promise<Hl7Message>((resolve, reject) => {
-			self.options.fs.stat(filepath, function(err: any, stats: any) {
+			fsModule.stat(filepath, function(err: NodeJS.ErrnoException | null, stats: fs.Stats) {
 				if (err){
 					if (self.listeners('error').length > 0){
 						self.emit('error', err);
@@ -397,10 +399,10 @@ class hl7Parser extends EventEmitter {
 					return;
 				}
 
-				self.options.fs.open(filepath, 'r', function(erro: any, fd: any) {
+				fsModule.open(filepath, 'r', function(erro: NodeJS.ErrnoException | null, fd: number) {
 					if (erro || !fd) {
 						if (fd){
-							self.options.fs.close(fd);
+							fsModule.close(fd, () => {});
 						}
 						if (self.listeners('error').length > 0){
 							self.emit('error', erro);
@@ -414,7 +416,7 @@ class hl7Parser extends EventEmitter {
 					const size = stats.size;
 					if (size <= 0){
 						if (fd){
-							self.options.fs.close(fd);
+							fsModule.close(fd, () => {});
 						}
 						const error = { msg: 'Size <=0 (' + size + ')', friendlyID: filepath};
 						if (self.listeners('error').length > 0){
@@ -430,10 +432,10 @@ class hl7Parser extends EventEmitter {
 					const bufferOffset = 0;
 					const bufferLength = readBuffer.length;
 					const filePosition = 0;
-					self.options.fs.read(fd, readBuffer, bufferOffset, bufferLength, filePosition,
-						function (fail: any, readBytes: number) {
+					fsModule.read(fd, readBuffer, bufferOffset, bufferLength, filePosition,
+						function (fail: NodeJS.ErrnoException | null, readBytes: number) {
 							if (fd) {
-								self.options.fs.close(fd, function(err: any){
+								fsModule.close(fd, function(err: NodeJS.ErrnoException | null){
 									if (err){
 										self.logger.error(err);
 									}
@@ -466,26 +468,14 @@ class hl7Parser extends EventEmitter {
 }
 
 function getSegmentsInformation(): void {
-	const files = fs.readdirSync(path.join(__dirname, 'segments'));
-	const segmentsinfo: SegmentInfo[] = files.filter(function(filename: string){
-		return filename.endsWith('.json');
-	}).map(function(filename: string){
-		return String(fs.readFileSync(path.join(__dirname, 'segments', filename), 'utf8'));
-	}).map(function(content: string){
-		return JSON.parse(content);
+	validSegmentsName = allSegmentDefs.map(function(segDef) {
+		return segDef.name;
 	});
 
-	validSegmentsName = segmentsinfo.reduce(function(p: string[], c: SegmentInfo){
-		p.push(c.name);
-
+	HL7Segment.prototype.segmentsFields = allSegmentDefs.reduce(function(p: SegmentsFields, c) {
+		p[c.name] = c.fields as unknown as string[];
 		return p;
-	}, []);
-
-	HL7Segment.prototype.segmentsFields = segmentsinfo.reduce(function(p: SegmentsFields, c: SegmentInfo){
-		p[c.name] = c.fields;
-
-		return p;
-	}, {});
+	}, {} as SegmentsFields);
 }
 
 getSegmentsInformation();

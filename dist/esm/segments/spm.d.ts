@@ -1,0 +1,6 @@
+export declare const SPMSegmentDef: {
+    name: "SPM";
+    fields: readonly ["Set Id - Spm", "Specimen Id", "Specimen Parent Ids", "Specimen Type", "Specimen Type Modifier", "Specimen Additives", "Specimen Collection Method", "Specimen Source Site", "Specimen Source Site Modifier", "Specimen Collection Site", "Specimen Role", "Specimen Collection Amount", "Grouped Specimen Count", "Specimen Description", "Specimen Handling Code", "Specimen Risk Code", "Specimen Collection Date/Time", "Specimen Received Date/Time", "Specimen Expiration Date/Time", "Specimen Availability", "Specimen Reject Reason", "Specimen Quality", "Specimen Appropriateness", "Specimen Condition", "Specimen Current Quantity", "Number Of Specimen Containers", "Container Type", "Container Condition", "Specimen Child Role", "Accession Id", "Other Specimen Id", "Shipment Id", "Culture Start Date/Time", "Culture Final Date/Time", "Action Code"];
+};
+export type SPMFieldName = typeof SPMSegmentDef.fields[number];
+//# sourceMappingURL=spm.d.ts.map

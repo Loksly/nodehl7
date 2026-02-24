@@ -1,0 +1,6 @@
+export declare const STFSegmentDef: {
+    name: "STF";
+    fields: readonly ["Primary Key Value - STF", "Staff Identifier List", "Staff Name", "Staff Type", "Administrative Sex", "Date/Time of Birth", "Active/Inactive Flag", "Department", "Hospital Service - STF", "Phone", "Office/Home Address/Birthplace", "Institution Activation Date", "Institution Inactivation Date", "Backup Person ID", "E-Mail Address", "Preferred Method of Contact", "Marital Status", "Job Title", "Job Code/Class", "Employment Status Code", "Additional Insured on Auto", "Driver's License Number - Staff", "Copy Auto Ins", "Auto Ins Expires", "Date Last DMV Review", "Date Next DMV Review", "Race", "Ethnic Group", "Re-activation Approval Indicator", "Citizenship", "Death Date and Time", "Death Indicator", "Institution Relationship Type Code", "Institution Relationship Period", "Expected Return Date", "Cost Center Code", "Generic Classification Indicator", "Inactive Reason Code", "Generic Resource Type or Category"];
+};
+export type STFFieldName = typeof STFSegmentDef.fields[number];
+//# sourceMappingURL=stf.d.ts.map

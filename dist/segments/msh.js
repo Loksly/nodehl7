@@ -1,0 +1,28 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.MSHSegmentDef = void 0;
+exports.MSHSegmentDef = {
+    name: 'MSH',
+    fields: [
+        "Encoding characters",
+        "Sending application",
+        "Sending facility",
+        "Receiving application",
+        "Receiving facility",
+        "Date/time of message",
+        "Security",
+        "Message type",
+        "Message control ID",
+        "Processing ID",
+        "Version ID",
+        "Sequence number",
+        "Continuation pointer",
+        "Accept acknowledgement type",
+        "Application acknowledgement type",
+        "Country code",
+        "Character set",
+        "Principal language of message",
+        "Alternate character set handling",
+    ],
+};
+//# sourceMappingURL=msh.js.map
