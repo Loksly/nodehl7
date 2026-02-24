@@ -89,7 +89,7 @@ class HL7Segment {
             return obj;
         }
         else {
-            if (this.logger && typeof this.logger === 'object' && 'error' in this.logger && typeof this.logger.error === 'function') {
+            if (this.logger) {
                 this.logger.error('ERROR, unknown segmentType: ' + this.typeofSegment);
             }
             return {};
@@ -145,7 +145,7 @@ const escapeChars = function (text, equivalences) {
 };
 function validSegmentType(segmentname, ID, logger) {
     if (validSegmentsName.indexOf(segmentname) < 0) {
-        if (logger && typeof logger === 'object' && 'error' in logger && typeof logger.error === 'function') {
+        if (logger) {
             logger.error('Unknown segmentType (' + ID + '): ' + segmentname);
         }
         return (segmentname.length === 3);
@@ -167,12 +167,9 @@ class hl7Parser extends EventEmitter {
         this.IOERROR = 3000;
         options = shallowClone(options);
         this.options = options;
-        this.logger = this.options.logger;
+        this.logger = this.options.logger || console;
         if (typeof this.options.mapping === 'undefined') {
             this.options.mapping = false;
-        }
-        if (typeof this.options.logger === 'undefined') {
-            this.logger = console;
         }
         if (typeof this.options.fs === 'undefined') {
             this.options.fs = fs;
@@ -357,7 +354,7 @@ class hl7Parser extends EventEmitter {
                     fsModule.read(fd, readBuffer, bufferOffset, bufferLength, filePosition, function (fail, readBytes) {
                         if (fd) {
                             fsModule.close(fd, function (err) {
-                                if (err && self.logger && typeof self.logger === 'object' && 'error' in self.logger && typeof self.logger.error === 'function') {
+                                if (err) {
                                     self.logger.error(err);
                                 }
                             });

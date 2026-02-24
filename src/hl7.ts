@@ -9,6 +9,9 @@ export type { SegmentFieldNameMap, HL7SegmentBase } from './segments';
 
 let validSegmentsName: string[] = [];
 
+type HL7Logger = Pick<Console, 'error'>;
+type HL7FileSystem = Pick<typeof fs, 'stat' | 'open' | 'close' | 'read'>;
+
 interface Delimiters {
 	composite: string;
 	subComposite: string;
@@ -19,8 +22,8 @@ interface Delimiters {
 
 interface HL7ParserOptions {
 	mapping?: boolean;
-	logger?: unknown;
-	fs?: unknown;
+	logger?: HL7Logger;
+	fs?: HL7FileSystem;
 	fileEncoding?: string;
 }
 
@@ -115,7 +118,7 @@ class HL7Segment {
 	order: number;
 	parts: (string | string[])[];
 	segmentsFields: SegmentsFields;
-	logger: unknown;
+	logger: HL7Logger;
 
 	constructor(typeofSegment: string, order: number, parts: (string | string[])[]) {
 		this.typeofSegment = typeofSegment;
@@ -140,8 +143,8 @@ class HL7Segment {
 			}
 			return obj;
 		} else {
-			if (this.logger && typeof this.logger === 'object' && 'error' in this.logger && typeof (this.logger as Record<string, unknown>).error === 'function') {
-				(this.logger as { error: (msg: string) => void }).error('ERROR, unknown segmentType: ' + this.typeofSegment);
+			if (this.logger) {
+				this.logger.error('ERROR, unknown segmentType: ' + this.typeofSegment);
 			}
 			return {};
 		}
@@ -197,10 +200,10 @@ const escapeChars = function(text: string, equivalences: Equivalence[]): string 
 	return text;
 };
 
-function validSegmentType(segmentname: string, ID: string, logger: unknown): boolean {
+function validSegmentType(segmentname: string, ID: string, logger: HL7Logger): boolean {
 	if (validSegmentsName.indexOf(segmentname) < 0){
-		if (logger && typeof logger === 'object' && 'error' in logger && typeof (logger as Record<string, unknown>).error === 'function'){
-			(logger as { error: (msg: string) => void }).error('Unknown segmentType (' + ID + '): ' + segmentname);
+		if (logger){
+			logger.error('Unknown segmentType (' + ID + '): ' + segmentname);
 		}
 		return (segmentname.length === 3);
 	}
@@ -220,7 +223,7 @@ function escapeRegExp(string: string): string {
 
 class hl7Parser extends EventEmitter {
 	options: HL7ParserOptions;
-	logger: unknown;
+	logger: HL7Logger;
 	readonly EMPTY: number = 1000;
 	readonly INVALID: number = 2000;
 	readonly IOERROR: number = 3000;
@@ -230,12 +233,9 @@ class hl7Parser extends EventEmitter {
 		super();
 		options = shallowClone(options);
 		this.options = options;
-		this.logger = this.options.logger;
+		this.logger = this.options.logger || console;
 		if (typeof this.options.mapping === 'undefined'){
 			this.options.mapping = false;
-		}
-		if (typeof this.options.logger === 'undefined'){
-			this.logger = console;
 		}
 		if (typeof this.options.fs === 'undefined'){
 			this.options.fs = fs;
@@ -384,7 +384,7 @@ class hl7Parser extends EventEmitter {
 	parseFile(filepath: string, wrappedDone?: (err: unknown, message?: Hl7Message) => void): Promise<Hl7Message> {
 		const self = this;
 		const fileEncoding = self.options.fileEncoding;
-		const fsModule = self.options.fs as typeof fs;
+		const fsModule = self.options.fs!;
 
 		return new Promise<Hl7Message>((resolve, reject) => {
 			fsModule.stat(filepath, function(err: NodeJS.ErrnoException | null, stats: fs.Stats) {
@@ -436,8 +436,8 @@ class hl7Parser extends EventEmitter {
 						function (fail: NodeJS.ErrnoException | null, readBytes: number) {
 							if (fd) {
 								fsModule.close(fd, function(err: NodeJS.ErrnoException | null){
-									if (err && self.logger && typeof self.logger === 'object' && 'error' in self.logger && typeof (self.logger as Record<string, unknown>).error === 'function'){
-										(self.logger as { error: (msg: unknown) => void }).error(err);
+									if (err){
+										self.logger.error(err);
 									}
 								});
 							}

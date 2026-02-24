@@ -14,6 +14,8 @@ Note there is another package named [node-hl7](https://github.com/ekryski/node-h
 ## Features
 
 - ✅ **TypeScript Support**: Full TypeScript definitions with type safety
+- ✅ **Typed Segment Definitions**: Each segment (PID, MSH, OBX, etc.) has its own TypeScript type with typed field names for autocompletion
+- ✅ **Type-safe Segment Access**: `message.get('PID')` returns a typed `PIDSegment` instead of a generic segment
 - ✅ **Promise-based API**: Modern async/await support with backward-compatible callbacks
 - ✅ **Dual Module Format**: Both CommonJS and ES Modules supported
 - ✅ **Event Emitter**: Subscribe to parse events
@@ -265,8 +267,8 @@ new Hl7Parser(config?)
 - `profiling` (boolean): Enable profiling
 - `debug` (boolean): Enable debug mode
 - `fileEncoding` (string): File encoding (default: 'utf8', example: 'iso-8859-1')
-- `logger` (object): Custom logger object
-- `fs` (object): Custom filesystem object
+- `logger` (`Pick<Console, 'error'>`): Custom logger object — must provide an `error()` method (defaults to `console`)
+- `fs` (`Pick<typeof fs, 'stat' | 'open' | 'close' | 'read'>`): Custom filesystem object — must provide `stat`, `open`, `close`, and `read` methods (defaults to Node.js `fs`)
 
 #### Methods
 
@@ -644,6 +646,32 @@ HL7Segment.prototype.segmentsFields = {
 </details>
 
 ## Migration Guide
+
+### From v1.x to v2.0.0
+
+Version 2.0.0 introduces typed segment definitions and stricter TypeScript types. Most users won't need any code changes — this is only a concern if you pass custom `logger` or `fs` options.
+
+**Custom logger** — Must now satisfy `Pick<Console, 'error'>`:
+```typescript
+// Before (any object was accepted)
+new Hl7Parser({ logger: myLogger });
+
+// After (must have an error() method compatible with Console.error)
+const myLogger = { error: (...args: any[]) => { /* ... */ } };
+new Hl7Parser({ logger: myLogger });
+```
+
+**Custom fs** — Must now satisfy `Pick<typeof fs, 'stat' | 'open' | 'close' | 'read'>`:
+```typescript
+// Must provide stat, open, close, and read methods
+new Hl7Parser({ fs: myCustomFs });
+```
+
+**Typed segment access** — `message.get('PID')` now returns `PIDSegment | null` instead of `HL7Segment | null` for known segment names:
+```typescript
+const pid = message.get('PID'); // PIDSegment | null
+const name = message.get('PID', 'Patient name'); // string | string[] | null
+```
 
 ### From Callbacks to Promises
 

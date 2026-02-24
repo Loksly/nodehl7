@@ -1,7 +1,10 @@
 import { EventEmitter } from 'events';
+import * as fs from 'fs';
 import { SegmentName, SegmentTypeMap, SegmentsFields } from './segments';
 export { SegmentName, SegmentTypeMap, SegmentsFields } from './segments';
 export type { SegmentFieldNameMap, HL7SegmentBase } from './segments';
+type HL7Logger = Pick<Console, 'error'>;
+type HL7FileSystem = Pick<typeof fs, 'stat' | 'open' | 'close' | 'read'>;
 interface Delimiters {
     composite: string;
     subComposite: string;
@@ -11,8 +14,8 @@ interface Delimiters {
 }
 interface HL7ParserOptions {
     mapping?: boolean;
-    logger?: unknown;
-    fs?: unknown;
+    logger?: HL7Logger;
+    fs?: HL7FileSystem;
     fileEncoding?: string;
 }
 declare class Hl7Message {
@@ -36,7 +39,7 @@ declare class HL7Segment {
     order: number;
     parts: (string | string[])[];
     segmentsFields: SegmentsFields;
-    logger: unknown;
+    logger: HL7Logger;
     constructor(typeofSegment: string, order: number, parts: (string | string[])[]);
     toMappedObject(compact?: boolean): Record<string, string | string[]>;
     get(nameField: string, joinChar?: string): string | string[] | null;
@@ -44,7 +47,7 @@ declare class HL7Segment {
 }
 declare class hl7Parser extends EventEmitter {
     options: HL7ParserOptions;
-    logger: unknown;
+    logger: HL7Logger;
     readonly EMPTY: number;
     readonly INVALID: number;
     readonly IOERROR: number;
